@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dernier Passage Bruxelles</title>
+<meta name="description" content="Atlas 3D des métros, trams, Noctis et trains à Bruxelles : premiers et derniers passages, itinéraire du dernier retour.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800;900&family=Noto+Sans:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --bg:#F2F2EE; --card:#FFFFFF; --soft:#F4F4F1; --ink:#2D2D2D; --ink2:#5E6166; --mute:#8C9096;
+  --rule:rgba(45,45,45,.09); --accent:#E0533F; --ok:#2E9A57; --warn:#C7741F; --dead:#D2D4D8;
+  --shadow:0 1px 2px rgba(20,22,28,.05),0 10px 30px rgba(20,22,28,.10);
+  --num:"Inter Tight","Noto Sans",system-ui,sans-serif;
+  --txt:"Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --panelTop:88px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1120; --card:#141C2E; --soft:#1C2640; --ink:#E9ECF2; --ink2:#AEB5C4; --mute:#7F889B;
+    --rule:rgba(255,255,255,.08); --accent:#F0634E; --ok:#4FC47D; --warn:#F0A04B; --dead:#283146;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1120; --card:#141C2E; --soft:#1C2640; --ink:#E9ECF2; --ink2:#AEB5C4; --mute:#7F889B;
+  --rule:rgba(255,255,255,.08); --accent:#F0634E; --ok:#4FC47D; --warn:#F0A04B; --dead:#283146;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--txt);font-size:14px;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+p{margin:0}
+.card{background:var(--card);border-radius:18px;box-shadow:var(--shadow)}
+
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+#labels{position:fixed;inset:0;pointer-events:none}
+
+/* étiquettes 3D */
+.lbl-st{transform:translateY(-16px);background:var(--card);border-radius:6px;padding:3px 7px 3px;text-align:center;line-height:1.1;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.14);transition:opacity .25s}
+.lbl-st b{display:block;font-size:11.5px;font-weight:700;color:var(--ink)}
+.lbl-st i{display:block;font-style:normal;font-family:var(--num);font-size:8px;font-weight:700;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.lbl-st.fade{opacity:.28}
+.lbl-com{font-family:var(--num);font-size:10.5px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--mute);opacity:.75;white-space:nowrap}
+.lbl-ax{font-family:var(--num);font-size:13px;font-weight:800;color:var(--ink2);transform:translateX(24px)}
+.lbl-now{font-family:var(--num);background:var(--accent);color:#fff;font-weight:800;font-size:12px;border-radius:999px;padding:3px 10px;transform:translateX(-34px)}
+.lbl-floor{font-size:13px;font-weight:900;letter-spacing:.2em;color:var(--ink2);text-transform:uppercase;white-space:nowrap}
+
+/* marque */
+#brand{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));left:16px;display:flex;align-items:center;gap:12px;padding:14px 20px 14px 14px;z-index:5}
+#brand svg{width:46px;height:46px;flex:none;color:var(--ink)}
+#brand svg text{font-family:var(--num);font-weight:900;font-size:13px;fill:currentColor}
+#brand h1{margin:0;font-size:21px;font-weight:900;letter-spacing:.05em;line-height:1.15;font-family:var(--num)}
+.brand-en{font-family:var(--num);font-size:10.5px;font-weight:700;letter-spacing:.28em;color:var(--mute);margin-top:3px}
+.brand-count{display:none;font-family:var(--num);color:var(--ink2);font-size:12px;margin-left:10px;gap:4px;align-items:baseline}
+.brand-count b{font-size:17px;font-weight:800;color:var(--ink);margin-left:6px}
+@media (min-width:1500px){.brand-count{display:flex}}
+
+/* contrôles */
+#controls{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:16px;left:380px;display:flex;gap:10px;z-index:6;flex-wrap:wrap;justify-content:flex-end;pointer-events:none}
+#controls>*{pointer-events:auto}
+.seg{display:flex;padding:5px;gap:2px;border-radius:999px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:8px 11px;font-size:13px;font-weight:700;color:var(--ink2);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.icon-btn{width:46px;height:46px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--card);box-shadow:var(--shadow);flex:none;color:var(--ink);font-family:var(--num);font-weight:900;font-size:13px}
+.icon-btn svg{width:21px;height:21px}
+.icon-btn[aria-expanded="true"]{background:var(--ink);color:var(--card)}
+
+/* panneau liste */
+#listPanel{position:fixed;left:16px;top:calc(106px + env(safe-area-inset-top,0px));bottom:calc(132px + env(safe-area-inset-bottom,0px));width:310px;display:flex;flex-direction:column;overflow:hidden;z-index:4}
+.panel-head{padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px}
+.search{display:flex;align-items:center;gap:8px;background:var(--soft);border-radius:12px;padding:0 12px;border:2px solid transparent}
+.search:focus-within{border-color:var(--ink);background:var(--card)}
+.search svg{width:17px;height:17px;color:var(--mute);flex:none}
+#q{flex:1;border:0;background:transparent;outline:0;padding:10px 0;font-size:14px;min-width:0}
+#qClear{border:0;background:transparent;color:var(--ink2);font-weight:900;padding:4px;display:none}
+.sort{display:flex;gap:6px;flex-wrap:wrap}
+.sort button{border:0;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;background:var(--soft);color:var(--ink2)}
+.sort button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.panel-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px}
+.group-head{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:700;color:var(--ink2);padding:14px 16px 6px}
+.group-head::after{content:"";flex:1;height:1px;background:var(--rule)}
+.row{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;width:100%;border:0;background:transparent;text-align:left;padding:10px 16px 12px}
+.row:hover{background:var(--soft)}
+.row[aria-current="true"]{background:var(--soft)}
+.row[aria-current="true"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--lc)}
+.row-name{display:block;font-weight:700;font-size:14px;line-height:1.25}
+.row-sub{display:block;font-size:11.5px;color:var(--mute);line-height:1.35;margin-top:1px}
+.row-time{text-align:right;line-height:1.1}
+.row-time b{display:block;font-family:var(--num);font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.row-time span{display:block;font-size:11px;font-weight:700;color:var(--ok);margin-top:2px;white-space:nowrap}
+.row-time span.run{color:var(--warn)}
+.row.done .row-time b,.row.done .row-name{color:var(--mute)}
+.row.done .row-time span{color:var(--mute)}
+.row-bar{grid-column:2/4;height:3px;background:var(--rule);border-radius:2px;overflow:hidden;margin-top:-4px}
+.row-bar i{display:block;height:100%;background:var(--lc);border-radius:2px}
+.badge{width:34px;height:34px;border-radius:50%;border:4px solid var(--lc);box-sizing:border-box;display:grid;place-items:center;font-family:var(--num);font-weight:900;font-size:12px;color:var(--ink);background:var(--card);flex:none;letter-spacing:-.03em}
+.badge.sm{width:24px;height:24px;border-width:3px;font-size:9.5px}
+.badge.lg{width:52px;height:52px;border-width:6px;font-size:16px}
+.badge.st{--lc:var(--ink)}
+
+/* panneaux de droite */
+.side{position:fixed;right:16px;top:var(--panelTop);bottom:calc(132px + env(safe-area-inset-bottom,0px));width:350px;display:flex;flex-direction:column;overflow:hidden;z-index:5}
+.side[hidden]{display:none}
+#detail{border-top:6px solid var(--lc,var(--ink))}
+.d-head{position:relative;padding:18px 18px 14px;border-bottom:1px solid var(--rule)}
+.d-title{display:flex;align-items:center;gap:14px;padding-right:40px}
+.d-title h2{margin:0;font-size:21px;font-weight:900;line-height:1.2}
+.d-en{font-family:var(--num);font-size:10.5px;font-weight:700;letter-spacing:.16em;color:var(--mute);text-transform:uppercase;margin-top:2px}
+.d-meta{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--ink2);flex-wrap:wrap}
+.chip{background:var(--soft);border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700;color:var(--ink2);border:0}
+button.chip{cursor:pointer}
+button.chip:hover{color:var(--ink)}
+.x-btn{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;border:0;background:var(--soft);display:grid;place-items:center}
+.x-btn svg{width:14px;height:14px}
+.d-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:4px 16px 18px}
+.d-sec{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 2px 10px}
+.dir{background:var(--soft);border-radius:14px;padding:14px 14px 4px;margin-bottom:12px}
+.dir-h{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:8px}
+.dir-h b{font-size:15px;font-weight:900;line-height:1.3}
+.dir-h span{font-size:11.5px;color:var(--ink2);text-align:right;line-height:1.4}
+.dep{border-top:1px solid var(--rule);padding:10px 0}
+.dep-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.dep-top span{font-weight:700;font-size:13.5px}
+.dep-top span small{font-weight:500;color:var(--ink2);font-size:11px;margin-left:3px}
+.dep-top b{font-family:var(--num);font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.dep-to{font-size:11.5px;color:var(--ink2);margin-top:1px}
+.dep-to strong{color:var(--ink);font-weight:700}
+.dep-full{margin-top:8px;background:var(--card);border-radius:8px;padding:6px 9px;font-size:11px;color:var(--ink2)}
+.dep-full b{color:var(--ink)}
+.dep.gone .dep-top b,.dep.gone .dep-top span{color:var(--mute)}
+.tt{width:100%;border-collapse:collapse;font-size:12.5px}
+.tt th{font-size:11px;font-weight:700;color:var(--mute);text-align:right;padding:6px 4px;border-bottom:1px solid var(--rule)}
+.tt th:first-child{text-align:left}
+.tt td{padding:7px 4px;border-bottom:1px solid var(--rule);text-align:right;vertical-align:top}
+.tt td:first-child{text-align:left;font-weight:700}
+.tt td[data-station]{cursor:pointer}
+.tt td[data-station]:hover{color:var(--accent)}
+.tt td b{display:block;font-family:var(--num);font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.tt td small{display:block;font-size:10.5px;color:var(--mute);white-space:nowrap}
+.tt td.gone b{color:var(--mute);font-weight:600}
+.tt td.best b{color:var(--ok)}
+.src{font-size:11px;color:var(--mute);line-height:1.6;margin-top:16px}
+.src a{color:inherit}
+.sline{background:var(--soft);border-radius:14px;padding:12px 14px 6px;margin-bottom:10px}
+.sline-h{display:flex;align-items:center;gap:10px;font-weight:900;font-size:14.5px;padding-bottom:8px;border:0;background:transparent;width:100%;text-align:left;padding-left:0}
+.sdep{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-top:1px solid var(--rule);padding:8px 0}
+.sdep span{font-size:12px;color:var(--ink2)}
+.sdep b{font-family:var(--num);font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.sdep.gone b{color:var(--mute)}
+.daybar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+.daybar div{background:var(--soft);border-radius:10px;padding:7px 8px;text-align:center}
+.daybar div small{display:block;font-size:10.5px;color:var(--ink2);font-weight:700}
+.daybar div b{font-family:var(--num);font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.daybar div.cur{outline:2px solid var(--ink)}
+
+/* itinéraire */
+.pform{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.pform label{display:block;font-size:11px;font-weight:700;color:var(--ink2);margin-bottom:4px}
+.pform input{width:100%;box-sizing:border-box;border:2px solid transparent;background:var(--soft);border-radius:10px;padding:9px 10px;font-size:14px;outline:0}
+.pform input:focus{border-color:var(--ink);background:var(--card)}
+#pSwap{grid-row:1/3;grid-column:2;width:36px;height:36px;border-radius:50%;border:0;background:var(--soft);display:grid;place-items:center;align-self:center}
+#pSwap svg{width:16px;height:16px}
+#pGo{margin-top:10px;width:100%;height:42px;border:0;border-radius:999px;background:var(--ink);color:var(--card);font-weight:800}
+.presult{margin-top:14px}
+.pbig{background:var(--soft);border-radius:14px;padding:14px}
+.pbig small{display:block;font-size:11.5px;color:var(--ink2);font-weight:700}
+.pbig b{display:block;font-family:var(--num);font-size:38px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.pbig p{font-size:12.5px;margin-top:4px}
+.pbig p.ok{color:var(--ok);font-weight:700}
+.pbig p.late{color:var(--accent);font-weight:700}
+.leg{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--rule)}
+.leg .lt{font-size:13px;font-weight:700;line-height:1.3}
+.leg .lt small{display:block;font-weight:500;color:var(--ink2);font-size:11.5px}
+.leg .tm{font-family:var(--num);font-weight:800;text-align:right;line-height:1.25;font-variant-numeric:tabular-nums}
+.leg .tm small{display:block;color:var(--mute);font-weight:600}
+.walk{width:24px;height:24px;display:grid;place-items:center;color:var(--ink2)}
+.walk svg{width:18px;height:18px}
+.far{display:grid;grid-template-columns:1fr auto auto;gap:4px 10px;align-items:baseline;font-size:13px}
+.far span{padding:6px 0;border-bottom:1px solid var(--rule)}
+.far b{font-family:var(--num);font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;padding:6px 0;border-bottom:1px solid var(--rule)}
+.far small{color:var(--mute);font-size:11px;padding:6px 0;border-bottom:1px solid var(--rule)}
+.far button{border:0;background:transparent;padding:6px 0;text-align:left;font-weight:600;border-bottom:1px solid var(--rule);cursor:pointer}
+.far button:hover{color:var(--accent)}
+
+/* comparaison */
+.cmp{width:100%;border-collapse:collapse;font-size:12.5px}
+.cmp th{font-size:11px;color:var(--mute);font-weight:700;padding:6px 4px;text-align:right;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--card)}
+.cmp th:first-child{text-align:left}
+.cmp td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--rule);font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums}
+.cmp td:first-child{text-align:left;font-family:var(--txt)}
+.cmp td.late{color:var(--ok);font-weight:900}
+.cmp td.none{color:var(--mute);font-weight:500}
+.cmp tr.grp td{font-family:var(--txt);font-size:11px;font-weight:700;color:var(--ink2);padding-top:14px}
+.cmp .lname{display:flex;align-items:center;gap:8px;font-weight:700}
+
+/* légende carte des heures */
+#legend{position:fixed;right:16px;bottom:calc(132px + env(safe-area-inset-bottom,0px));padding:12px 16px 10px;z-index:4;width:280px;box-sizing:border-box}
+#legend[hidden]{display:none}
+#legend p{font-size:12px;font-weight:700;margin-bottom:8px}
+#legendBar{height:10px;border-radius:5px}
+#legendTicks{position:relative;height:16px;margin-top:4px}
+#legendTicks span{position:absolute;transform:translateX(-50%);font-family:var(--num);font-size:11px;color:var(--ink2);font-weight:600}
+#legend small{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2);margin-top:4px}
+#legend small i{display:inline-block;width:18px;height:4px;border-radius:2px;background:var(--dead)}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--card);font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;z-index:9;white-space:nowrap;transform:translate(12px,-120%)}
+#tip[hidden]{display:none}
+#tip b{font-family:var(--num)}
+
+/* barre horaire */
+#timebar{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));height:100px;box-sizing:border-box;display:grid;grid-template-columns:200px 1fr auto;gap:28px;align-items:center;padding:0 22px;border-radius:24px;z-index:6}
+.clock-label{font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.clock-time{font-family:var(--num);font-size:46px;font-weight:800;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:2px}
+.track-wrap{min-width:0}
+#track{position:relative;height:34px;margin:0 12px;cursor:pointer;touch-action:none}
+.track-band{position:absolute;left:-12px;right:-12px;top:11px;height:12px;border-radius:999px;background:var(--soft);overflow:hidden}
+.track-fill{position:absolute;left:0;top:0;bottom:0;background:var(--ink);border-radius:999px}
+.tick{position:absolute;top:17px}
+.tick i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:var(--card);border:3px solid var(--ink);box-sizing:border-box}
+.tick.minor i{left:-2.5px;top:-2.5px;width:5px;height:5px;border:0;background:var(--card)}
+.tick.after i{border-color:var(--mute)}
+.tick.minor.after i{background:var(--mute)}
+.tick span{position:absolute;top:14px;transform:translateX(-50%);font-family:var(--num);font-size:12px;font-weight:600;color:var(--ink2);white-space:nowrap}
+#knob{position:absolute;top:17px;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:var(--card);border:5px solid var(--accent);box-sizing:border-box;box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 22%,transparent)}
+#status{font-size:12px;color:var(--ink2);text-align:center;margin-top:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#status b{color:var(--ink);font-weight:700}
+.tb-buttons{display:flex;gap:10px;align-items:center}
+#play{width:48px;height:48px;border-radius:50%;border:0;background:var(--ink);color:var(--card);display:grid;place-items:center}
+#play svg{width:15px;height:15px}
+.pill{height:44px;border:2px solid var(--ink);background:transparent;border-radius:999px;padding:0 18px;font-weight:800;font-size:13px;white-space:nowrap}
+
+#hint{position:fixed;left:50%;bottom:calc(128px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--card);border-radius:18px;padding:12px 22px;font-size:13px;font-weight:700;text-align:center;line-height:1.6;z-index:7;cursor:pointer;transition:opacity .4s;max-width:calc(100% - 32px);box-sizing:border-box}
+#hint.hide{opacity:0;pointer-events:none}
+#loading{position:fixed;inset:0;display:grid;place-items:center;font-weight:700;color:var(--ink2);z-index:2}
+#help ul{margin:0;padding-left:18px;line-height:1.7;font-size:13px}
+#help li{margin-bottom:8px}
+.pad{padding:18px 18px}
+.pad h2{margin:0 0 12px;font-size:18px;font-weight:900}
+
+#listToggle{display:none}
+
+@media (max-width:1100px){ #controls{left:16px;top:calc(104px + env(safe-area-inset-top,0px));justify-content:flex-start} #listPanel{top:calc(214px + env(safe-area-inset-top,0px))} }
+@media (max-width:900px){
+  #brand{top:calc(10px + env(safe-area-inset-top,0px));left:10px;padding:8px 14px 8px 8px;gap:8px}
+  #brand svg{width:34px;height:34px}
+  #brand h1{font-size:15px}
+  .brand-en{font-size:8px;letter-spacing:.18em}
+  #controls{top:calc(66px + env(safe-area-inset-top,0px));left:10px;right:10px;gap:6px}
+  .seg{padding:3px}
+  .seg button{padding:6px 8px;font-size:11.5px}
+  .icon-btn{width:38px;height:38px;font-size:11px}
+  #listToggle{display:grid;position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:10px;z-index:6}
+  #listPanel{display:none;left:10px;right:10px;width:auto;top:auto;height:48vh;bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+  #listPanel.open{display:flex}
+  .side{left:10px;right:10px;width:auto;top:auto;height:55vh;bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+  #legend{left:10px;right:auto;width:240px;bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+  #timebar{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));height:auto;grid-template-columns:auto 1fr;gap:6px 12px;padding:10px 14px 12px}
+  .clock-time{font-size:30px}
+  .track-wrap{grid-column:1/3;grid-row:2}
+  .tb-buttons{justify-content:flex-end}
+  .pill{height:38px;padding:0 12px;font-size:12px}
+  #play{width:40px;height:40px}
+  .tick.hide-sm span{display:none}
+  #status{margin-top:20px;font-size:11px}
+  #hint{bottom:calc(170px + env(safe-area-inset-bottom,0px));font-size:12px}
+}
+@media (prefers-reduced-motion:reduce){#hint,.lbl-st{transition:none}}
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+<div id="labels"></div>
+<div id="loading">Pose des voies…</div>
+
+<header id="brand" class="card">
+  <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="6"/><text x="24" y="28.5" text-anchor="middle">FIN</text></svg>
+  <div>
+    <h1 data-i18n="title">DERNIER PASSAGE</h1>
+    <p class="brand-en">BRUSSELS LAST TRAIN ATLAS</p>
+  </div>
+  <p class="brand-count"><b id="countLines">0</b><span data-i18n="lines">lignes</span><b id="countStations">0</b><span data-i18n="stops">arrêts</span></p>
+</header>
+
+<nav id="controls">
+  <div class="seg card" role="group" id="daySeg">
+    <button type="button" id="d-semaine" data-day="semaine" data-i18n="semaine">Semaine</button>
+    <button type="button" id="d-vendredi" data-day="vendredi" data-i18n="vendredi">Vendredi</button>
+    <button type="button" id="d-samedi" data-day="samedi" data-i18n="samedi">Samedi</button>
+    <button type="button" id="d-dimanche" data-day="dimanche" data-i18n="dimanche">Dimanche</button>
+  </div>
+  <div class="seg card" role="group" id="viewSeg">
+    <button type="button" id="v-time" data-view="time" data-i18n="vTime">Hauteur</button>
+    <button type="button" id="v-floor" data-view="floor" data-i18n="vFloor">Étages</button>
+    <button type="button" id="v-flat" data-view="flat" data-i18n="vFlat">Plan</button>
+    <button type="button" id="v-heat" data-view="heat" data-i18n="vHeat">Heures</button>
+  </div>
+  <button type="button" class="icon-btn" id="routeBtn" aria-expanded="false" data-i18n-label="route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.6"/></svg></button>
+  <button type="button" class="icon-btn" id="cmpBtn" aria-expanded="false" data-i18n-label="compare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 20V10M10 20V4M15 20v-7M20 20V8"/></svg></button>
+  <button type="button" class="icon-btn" id="langBtn" data-i18n-label="lang">FR</button>
+  <button type="button" class="icon-btn" id="themeBtn" data-i18n-label="theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></button>
+  <button type="button" class="icon-btn" id="helpBtn" aria-expanded="false" data-i18n-label="help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.2"/></svg></button>
+</nav>
+<button type="button" class="icon-btn" id="listToggle" data-i18n-label="lineList"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+
+<aside id="listPanel" class="card">
+  <div class="panel-head">
+    <label class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5 20 20" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <input id="q" type="text" autocomplete="off">
+      <button type="button" id="qClear">✕</button>
+    </label>
+    <div class="sort" role="group">
+      <button type="button" id="s-op" data-sort="op" data-i18n="sOp">Par réseau</button>
+      <button type="button" id="s-early" data-sort="early" data-i18n="sEarly">Finit tôt</button>
+      <button type="button" id="s-late" data-sort="late" data-i18n="sLate">Roule tard</button>
+    </div>
+  </div>
+  <div class="panel-body" id="listBody"></div>
+</aside>
+
+<aside id="detail" class="card side" hidden aria-live="polite">
+  <div class="d-head" id="dHead"></div>
+  <div class="d-body" id="dBody"></div>
+</aside>
+
+<aside id="planner" class="card side" hidden>
+  <div class="d-head"><h2 style="margin:0;font-size:19px;font-weight:900" data-i18n="plannerTitle">Puis-je encore rentrer ?</h2>
+    <button type="button" class="x-btn" data-close="planner"><svg viewBox="0 0 14 14"><path d="M2 2l10 10M12 2 2 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div>
+  <div class="d-body">
+    <form id="pForm" class="pform" style="margin-top:12px" autocomplete="off">
+      <div><label for="pFrom" data-i18n="from">Départ</label><input id="pFrom" list="stList" required></div>
+      <button type="button" id="pSwap"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 2v12M2 5l3-3 3 3M11 14V2M8 11l3 3 3-3"/></svg></button>
+      <div><label for="pTo" data-i18n="to">Arrivée</label><input id="pTo" list="stList" required></div>
+      <button type="submit" id="pGo" style="grid-column:1/3" data-i18n="pGo">Trouver le dernier départ</button>
+    </form>
+    <datalist id="stList"></datalist>
+    <div class="presult" id="pResult"></div>
+    <p class="d-sec" data-i18n="farTitle">Derniers trains depuis Bruxelles</p>
+    <div class="far" id="farList"></div>
+    <p class="src" data-i18n="plannerNote"></p>
+  </div>
+</aside>
+
+<aside id="compare" class="card side" hidden>
+  <div class="d-head"><h2 style="margin:0;font-size:19px;font-weight:900" data-i18n="cmpTitle">Comparer les jours</h2>
+    <button type="button" class="x-btn" data-close="compare"><svg viewBox="0 0 14 14"><path d="M2 2l10 10M12 2 2 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+    <p class="src" style="margin-top:6px" data-i18n="cmpNote"></p></div>
+  <div class="d-body" id="cmpBody"></div>
+</aside>
+
+<aside id="help" class="card side" hidden>
+  <div class="d-head"><h2 style="margin:0;font-size:19px;font-weight:900" data-i18n="helpTitle">Mode d'emploi</h2>
+    <button type="button" class="x-btn" data-close="help"><svg viewBox="0 0 14 14"><path d="M2 2l10 10M12 2 2 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div>
+  <div class="d-body"><ul id="helpList" style="margin-top:12px"></ul><div class="src" id="credits"></div></div>
+</aside>
+
+<div id="legend" class="card" hidden>
+  <p data-i18n="legendTitle">Heure du dernier passage</p>
+  <div id="legendBar"></div>
+  <div id="legendTicks"></div>
+  <small><i></i><span data-i18n="legendBefore">avant 22:00 ou pas de service</span></small>
+</div>
+<div id="tip" hidden></div>
+
+<section id="timebar" class="card">
+  <div class="clock">
+    <p class="clock-label" data-i18n="shown">Heure affichée</p>
+    <p class="clock-time" id="clockTime">23:30</p>
+  </div>
+  <div class="track-wrap">
+    <div id="track" role="slider" tabindex="0">
+      <div class="track-band"><div class="track-fill" id="trackFill"></div></div>
+      <div id="ticks"></div>
+      <div id="knob"></div>
+    </div>
+    <p id="status"></p>
+  </div>
+  <div class="tb-buttons">
+    <button type="button" id="play"></button>
+    <button type="button" class="pill" id="nowBtn" data-i18n="now">Heure actuelle</button>
+  </div>
+</section>
+
+<div id="hint"></div>
+
+<script src="data.js"></script>
+<script src="basemap.js"></script>
+<script src="journeys.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+const D = window.BLT_DATA, JD = window.BLT_TRIPS;
+const $ = (s) => document.querySelector(s);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("blt3." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("blt3." + k, JSON.stringify(v)); } catch {} },
+};
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ARTIFACT_URL = "https://claude.ai/artifact/86dtncCiWMWBSbRf2eFydt";
+
+// ---------------------------------------------------------------- langues
+const I18N = {
+  fr: {
+    title: "DERNIER PASSAGE", lines: "lignes", stops: "arrêts", semaine: "Semaine", vendredi: "Vendredi", samedi: "Samedi", dimanche: "Dimanche",
+    vTime: "Hauteur", vFloor: "Étages", vFlat: "Plan", vHeat: "Heures", route: "Puis-je encore rentrer ?", compare: "Comparer les jours", lang: "Langue", theme: "Changer de thème", help: "Mode d'emploi", lineList: "Liste des lignes",
+    search: "Chercher un arrêt ou une ligne", sOp: "Par réseau", sEarly: "Finit tôt", sLate: "Roule tard", shown: "Heure affichée", now: "Heure actuelle",
+    g_metro: "STIB · Métro", g_tram: "STIB · Tram", g_noctis: "STIB · Noctis (nuits du week-end)", g_sncb: "SNCB · Train S",
+    fl_metro: "Métro · sous terre", fl_tram: "Tram et Noctis", fl_sncb: "Train S",
+    in: (x) => `dans ${x}`, running: "dernier en route", done: "terminé", first: (x) => `1er départ ${x}`, noService: "pas de service", noServiceDay: "Pas de service ce jour-là.",
+    stopsN: (n) => `${n} arrêts`, linesN: (n) => `${n} ligne${n > 1 ? "s" : ""}`, service: "Service",
+    perDir: "Derniers départs par direction", toward: "Vers", dep: "dép.", arr: "arr.", lastTo: (t, d, a) => `Le dernier jusqu'à ${t} part à <b>${d}</b> (arr. ${a})`,
+    perStop: "Derniers départs à chaque arrêt", stop: "Arrêt", fromStop: "Derniers départs depuis cet arrêt", none: "aucun", until: "jusqu'à",
+    byDay: "Dernier départ selon le jour", copy: "Copier le lien", copied: "Lien copié", copyFail: "Copie impossible : sélectionnez l'adresse ci-dessous",
+    srcLine: (op, d) => `Calculé pour chaque arrêt à partir des horaires ${op === "STIB" ? "GTFS de la STIB" : "GTFS de la SNCB"}. Jour de référence : ${d}.`,
+    stopsHead: "Arrêts", linesHead: "Lignes", noMatch: (q) => `Aucun arrêt ni ligne pour « ${q} ».`, andMore: (n) => `et ${n} autres`,
+    stNow: (on, off) => `En service <b>${on}</b> lignes · dernier départ passé <b>${off}</b>`, stWait: (n) => ` · pas encore commencé <b>${n}</b>`,
+    nextFirst: "Prochain premier départ", nextEnd: "Prochaine à finir", allStopped: "Tout le réseau est à l'arrêt.",
+    hint: "Faites glisser la barre horaire : chaque voie s'allume au premier passage et s'éteint au dernier.<br>Faites glisser la carte pour la faire tourner.",
+    plannerTitle: "Puis-je encore rentrer ?", from: "Départ", to: "Arrivée", pGo: "Trouver le dernier départ",
+    pLast: "Dernier départ possible", pFromStop: (s) => `de ${s}`, pLeft: (x) => `Il vous reste ${x} à l'heure affichée.`, pLate: (t) => `Trop tard à ${t} : ce dernier départ est déjà passé.`,
+    pNone: "Aucun trajet possible ce soir entre ces deux arrêts.", pUnknown: (s) => `Arrêt inconnu : « ${s} ». Choisissez-le dans la liste.`, pSame: "Choisissez deux arrêts différents.",
+    walk: (m, s) => `À pied ${m} min jusqu'à ${s}`, arrAt: (t) => `arrivée ${t}`, showMap: "Voir sur la carte",
+    farTitle: "Derniers trains depuis Bruxelles (Midi, Central, Nord)", farFrom: (s) => `de ${s}`,
+    plannerNote: "Calcul à partir des horaires théoriques du soir, correspondances comprises (2 min minimum, trajets à pied jusqu'à 400 m). Métro, tram, Noctis et trains SNCB (S, IC, L, P) ; bus de jour non inclus.",
+    cmpTitle: "Comparer les jours", cmpNote: "Dernier départ de chaque ligne selon le jour. Le plus tardif est en vert.", line: "Ligne",
+    helpTitle: "Mode d'emploi",
+    helpItems: [
+      "<b>Chaque ligne est une bande à deux voies</b>, une par sens. Les trains SNCB roulent à gauche, métro et tram à droite. Une voie s'allume au premier passage du matin et devient grise après le dernier.",
+      "<b>Les points lumineux</b> sont les premiers et derniers véhicules en route, avec leur traînée.",
+      "<b>Hauteur</b> : plus une ligne finit tard, plus elle flotte haut ; le plan rouge est l'heure affichée. <b>Étages</b> : le métro passe sous le sol, le tram et les Noctis en surface, les trains au-dessus. <b>Heures</b> : chaque tronçon est coloré selon l'heure de son dernier passage.",
+      "<b>Puis-je encore rentrer ?</b> calcule le dernier départ possible entre deux arrêts, correspondances comprises, et les derniers trains vers les grandes villes.",
+      "Glisser pour tourner, clic droit ou deux doigts pour déplacer, molette ou pincement pour zoomer. Cliquez une ligne ou cherchez un arrêt pour ses derniers départs. Chaque fiche a un lien à partager.",
+    ],
+    credits: (f) => `Horaires : GTFS open data de la STIB (${f[0]}) et de la SNCB (${f[1]}). Tracés des trains, fond de carte : © contributeurs OpenStreetMap (ODbL). Jours de référence : mardi 29/09, vendredi 02/10, samedi 03/10 et dimanche 04/10/2026 ; les trajets d'après minuit comptent pour la soirée de la veille. Horaires théoriques : travaux, retards et trains supplémentaires ne sont pas pris en compte. Vérifiez sur <a href="https://www.stib-mivb.be" target="_blank" rel="noopener">stib-mivb.be</a> et <a href="https://www.belgiantrain.be" target="_blank" rel="noopener">belgiantrain.be</a>.<br>Idée : <a href="https://tokyo-last-train.matodesign.workers.dev/" target="_blank" rel="noopener">Tokyo Last Train Atlas</a>.`,
+    legendTitle: "Heure du dernier passage", legendBefore: "avant 22:00 ou pas de service", tipLast: "dernier passage ici",
+    kind: { metro: "Métro", tram: "Tram", noctis: "Noctis", sncb: "Train", ic: "Train" },
+  },
+  nl: {
+    title: "LAATSTE DOORTOCHT", lines: "lijnen", stops: "haltes", semaine: "Weekdag", vendredi: "Vrijdag", samedi: "Zaterdag", dimanche: "Zondag",
+    vTime: "Hoogte", vFloor: "Verdiepingen", vFlat: "Plattegrond", vHeat: "Uren", route: "Geraak ik nog thuis?", compare: "Dagen vergelijken", lang: "Taal", theme: "Thema wisselen", help: "Handleiding", lineList: "Lijnenlijst",
+    search: "Zoek een halte of lijn", sOp: "Per net", sEarly: "Stopt vroeg", sLate: "Rijdt laat", shown: "Getoond uur", now: "Nu",
+    g_metro: "MIVB · Metro", g_tram: "MIVB · Tram", g_noctis: "MIVB · Noctis (weekendnachten)", g_sncb: "NMBS · S-trein",
+    fl_metro: "Metro · ondergronds", fl_tram: "Tram en Noctis", fl_sncb: "S-trein",
+    in: (x) => `over ${x}`, running: "laatste onderweg", done: "gedaan", first: (x) => `1e vertrek ${x}`, noService: "geen dienst", noServiceDay: "Geen dienst op deze dag.",
+    stopsN: (n) => `${n} haltes`, linesN: (n) => `${n} lijn${n > 1 ? "en" : ""}`, service: "Dienst",
+    perDir: "Laatste vertrekken per richting", toward: "Richting", dep: "vertr.", arr: "aank.", lastTo: (t, d, a) => `De laatste tot ${t} vertrekt om <b>${d}</b> (aank. ${a})`,
+    perStop: "Laatste vertrek aan elke halte", stop: "Halte", fromStop: "Laatste vertrekken aan deze halte", none: "geen", until: "tot",
+    byDay: "Laatste vertrek per dag", copy: "Link kopiëren", copied: "Link gekopieerd", copyFail: "Kopiëren lukt niet: selecteer het adres hieronder",
+    srcLine: (op, d) => `Berekend voor elke halte uit de ${op === "STIB" ? "GTFS-dienstregeling van de MIVB" : "GTFS-dienstregeling van de NMBS"}. Referentiedag: ${d}.`,
+    stopsHead: "Haltes", linesHead: "Lijnen", noMatch: (q) => `Geen halte of lijn voor "${q}".`, andMore: (n) => `en ${n} andere`,
+    stNow: (on, off) => `In dienst <b>${on}</b> lijnen · laatste vertrek voorbij <b>${off}</b>`, stWait: (n) => ` · nog niet begonnen <b>${n}</b>`,
+    nextFirst: "Volgend eerste vertrek", nextEnd: "Volgende die stopt", allStopped: "Het hele net ligt stil.",
+    hint: "Versleep de tijdbalk: elk spoor licht op bij de eerste doortocht en dooft na de laatste.<br>Sleep de kaart om ze te draaien.",
+    plannerTitle: "Geraak ik nog thuis?", from: "Vertrek", to: "Aankomst", pGo: "Zoek het laatste vertrek",
+    pLast: "Laatst mogelijke vertrek", pFromStop: (s) => `vanaf ${s}`, pLeft: (x) => `U hebt nog ${x} op het getoonde uur.`, pLate: (t) => `Te laat om ${t}: dit laatste vertrek is al voorbij.`,
+    pNone: "Vanavond geen verbinding tussen deze haltes.", pUnknown: (s) => `Onbekende halte: "${s}". Kies ze uit de lijst.`, pSame: "Kies twee verschillende haltes.",
+    walk: (m, s) => `${m} min te voet naar ${s}`, arrAt: (t) => `aankomst ${t}`, showMap: "Op de kaart tonen",
+    farTitle: "Laatste treinen vanuit Brussel (Zuid, Centraal, Noord)", farFrom: (s) => `vanaf ${s}`,
+    plannerNote: "Berekend uit de theoretische avonddienstregeling, met overstappen (minstens 2 min, wandelen tot 400 m). Metro, tram, Noctis en NMBS-treinen (S, IC, L, P); dagbussen niet inbegrepen.",
+    cmpTitle: "Dagen vergelijken", cmpNote: "Laatste vertrek van elke lijn per dag. Het laatste staat in het groen.", line: "Lijn",
+    helpTitle: "Handleiding",
+    helpItems: [
+      "<b>Elke lijn is een band met twee sporen</b>, één per richting. NMBS-treinen rijden links, metro en tram rechts. Een spoor licht op bij de eerste doortocht en wordt grijs na de laatste.",
+      "<b>De lichtende punten</b> zijn de eerste en laatste voertuigen onderweg, met hun spoor.",
+      "<b>Hoogte</b>: hoe later een lijn stopt, hoe hoger ze zweeft; het rode vlak is het getoonde uur. <b>Verdiepingen</b>: de metro onder de grond, tram en Noctis aan de oppervlakte, treinen erboven. <b>Uren</b>: elk traject gekleurd volgens het uur van de laatste doortocht.",
+      "<b>Geraak ik nog thuis?</b> berekent het laatste mogelijke vertrek tussen twee haltes, met overstappen, en de laatste treinen naar de grote steden.",
+      "Slepen om te draaien, rechtsklik of twee vingers om te verschuiven, scrollen of knijpen om te zoomen. Klik op een lijn of zoek een halte. Elke fiche heeft een deelbare link.",
+    ],
+    credits: (f) => `Dienstregeling: open data GTFS van de MIVB (${f[0]}) en de NMBS (${f[1]}). Spoortracés en achtergrondkaart: © OpenStreetMap-bijdragers (ODbL). Referentiedagen: di 29/09, vr 02/10, za 03/10 en zo 04/10/2026; ritten na middernacht tellen voor de avond ervoor. Theoretische dienstregeling: werken, vertragingen en extra treinen niet inbegrepen. Controleer op <a href="https://www.stib-mivb.be" target="_blank" rel="noopener">stib-mivb.be</a> en <a href="https://www.belgiantrain.be" target="_blank" rel="noopener">belgiantrain.be</a>.<br>Idee: <a href="https://tokyo-last-train.matodesign.workers.dev/" target="_blank" rel="noopener">Tokyo Last Train Atlas</a>.`,
+    legendTitle: "Uur van de laatste doortocht", legendBefore: "voor 22:00 of geen dienst", tipLast: "laatste doortocht hier",
+    kind: { metro: "Metro", tram: "Tram", noctis: "Noctis", sncb: "Trein", ic: "Trein" },
+  },
+  en: {
+    title: "LAST RIDE", lines: "lines", stops: "stops", semaine: "Weekday", vendredi: "Friday", samedi: "Saturday", dimanche: "Sunday",
+    vTime: "Height", vFloor: "Floors", vFlat: "Flat", vHeat: "Hours", route: "Can I still get home?", compare: "Compare days", lang: "Language", theme: "Switch theme", help: "How it works", lineList: "Line list",
+    search: "Search a stop or line", sOp: "By network", sEarly: "Ends early", sLate: "Runs late", shown: "Time shown", now: "Now",
+    g_metro: "STIB · Metro", g_tram: "STIB · Tram", g_noctis: "STIB · Noctis (weekend nights)", g_sncb: "SNCB · S train",
+    fl_metro: "Metro · underground", fl_tram: "Tram and Noctis", fl_sncb: "S train",
+    in: (x) => `in ${x}`, running: "last one running", done: "finished", first: (x) => `first at ${x}`, noService: "no service", noServiceDay: "No service on this day.",
+    stopsN: (n) => `${n} stops`, linesN: (n) => `${n} line${n > 1 ? "s" : ""}`, service: "Service",
+    perDir: "Last departures by direction", toward: "To", dep: "dep.", arr: "arr.", lastTo: (t, d, a) => `The last one to ${t} leaves at <b>${d}</b> (arr. ${a})`,
+    perStop: "Last departure at every stop", stop: "Stop", fromStop: "Last departures from this stop", none: "none", until: "to",
+    byDay: "Last departure by day", copy: "Copy link", copied: "Link copied", copyFail: "Couldn't copy: select the address below",
+    srcLine: (op, d) => `Computed for every stop from the ${op === "STIB" ? "STIB GTFS timetable" : "SNCB GTFS timetable"}. Reference day: ${d}.`,
+    stopsHead: "Stops", linesHead: "Lines", noMatch: (q) => `No stop or line matches "${q}".`, andMore: (n) => `and ${n} more`,
+    stNow: (on, off) => `Running <b>${on}</b> lines · last departure gone <b>${off}</b>`, stWait: (n) => ` · not started yet <b>${n}</b>`,
+    nextFirst: "Next first departure", nextEnd: "Next to finish", allStopped: "The whole network has stopped.",
+    hint: "Drag the time bar: each track lights up with the first run and goes dark after the last.<br>Drag the map to rotate it.",
+    plannerTitle: "Can I still get home?", from: "From", to: "To", pGo: "Find the last departure",
+    pLast: "Latest possible departure", pFromStop: (s) => `from ${s}`, pLeft: (x) => `You have ${x} left at the time shown.`, pLate: (t) => `Too late at ${t}: this last departure has gone.`,
+    pNone: "No connection between these stops tonight.", pUnknown: (s) => `Unknown stop: "${s}". Pick it from the list.`, pSame: "Pick two different stops.",
+    walk: (m, s) => `Walk ${m} min to ${s}`, arrAt: (t) => `arrives ${t}`, showMap: "Show on map",
+    farTitle: "Last trains from Brussels (Midi, Central, Nord)", farFrom: (s) => `from ${s}`,
+    plannerNote: "Computed from the scheduled evening timetable, with transfers (2 min minimum, walks up to 400 m). Metro, tram, Noctis and SNCB trains (S, IC, L, P); daytime buses not included.",
+    cmpTitle: "Compare days", cmpNote: "Last departure of every line by day. The latest is in green.", line: "Line",
+    helpTitle: "How it works",
+    helpItems: [
+      "<b>Each line is a two-track band</b>, one per direction. SNCB trains run on the left, metro and tram on the right. A track lights up with the first run of the morning and turns grey after the last.",
+      "<b>Glowing dots</b> are the first and last vehicles on their way, with a trail.",
+      "<b>Height</b>: the later a line ends, the higher it floats; the red plane is the time shown. <b>Floors</b>: metro underground, tram and Noctis at street level, trains above. <b>Hours</b>: every section coloured by the time of its last run.",
+      "<b>Can I still get home?</b> finds the latest possible departure between two stops, with transfers, plus the last trains to major cities.",
+      "Drag to rotate, right-click or two fingers to pan, wheel or pinch to zoom. Click a line or search a stop for its last departures. Every card has a shareable link.",
+    ],
+    credits: (f) => `Timetables: STIB (${f[0]}) and SNCB (${f[1]}) GTFS open data. Train alignments and base map: © OpenStreetMap contributors (ODbL). Reference days: Tue 29/09, Fri 02/10, Sat 03/10 and Sun 04/10/2026; runs after midnight count for the previous evening. Scheduled times only: works, delays and extra trains are not included. Check <a href="https://www.stib-mivb.be" target="_blank" rel="noopener">stib-mivb.be</a> and <a href="https://www.belgiantrain.be" target="_blank" rel="noopener">belgiantrain.be</a>.<br>Idea: <a href="https://tokyo-last-train.matodesign.workers.dev/" target="_blank" rel="noopener">Tokyo Last Train Atlas</a>.`,
+    legendTitle: "Time of the last run", legendBefore: "before 22:00 or no service", tipLast: "last run here",
+    kind: { metro: "Metro", tram: "Tram", noctis: "Noctis", sncb: "Train", ic: "Train" },
+  },
+};
+let lang = store.get("lang", (navigator.language || "fr").slice(0, 2));
+if (!I18N[lang]) lang = "fr";
+const t = (k) => I18N[lang][k];
+const stName = (fr, nl) => (lang === "nl" && nl ? nl : fr);
+const stOther = (fr, nl) => (lang === "nl" ? (nl && nl !== fr ? fr : "") : (nl && nl !== fr ? nl : ""));
+
+// ---------------------------------------------------------------- temps
+const T_MIN = 4 * 60, T_MAX = 28 * 60;
+const H_MIN = 21 * 60 + 30, H_MAX = 25 * 60 + 45;
+const fmt = (x) => { x = Math.floor(x + 1e-6); return `${Math.floor(x / 60) % 24}:${String(x % 60).padStart(2, "0")}`; };
+const dur = (m) => { m = Math.max(0, Math.ceil(m)); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}` : `${m} min`; };
+const DAYS = ["semaine", "vendredi", "samedi", "dimanche"];
+const FLOOR = { metro: -2.6, tram: 1.8, noctis: 1.8, sncb: 4.8 };
+const H = 9;
+const yTime = (T) => T == null || T < 0 ? 0 : Math.max(0, Math.min(1.05, (T - H_MIN) / (H_MAX - H_MIN))) * H;
+const mix = (a, b, u) => a + (b - a) * u;
+const slug = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+const lines = D.lines;
+const state = { day: store.get("day", "semaine"), view: store.get("view", "time"), sort: store.get("sort", "op"), t: 23 * 60 + 30, sel: null, station: null, route: null, playing: false };
+if (!DAYS.includes(state.day)) state.day = "semaine";
+if (!["time", "floor", "flat", "heat"].includes(state.view)) state.view = "time";
+
+// ---------------------------------------------------------------- préparation des lignes
+const STEP = 0.08;
+lines.forEach((L, li) => {
+  L.li = li;
+  L.leftHand = L.grp === "sncb";
+  L.v = []; L.segRange = [];
+  L.geom.forEach((poly, si) => {
+    const cum = [0];
+    for (let i = 1; i < poly.length; i++) cum.push(cum[i - 1] + Math.hypot(poly[i][0] - poly[i - 1][0], poly[i][1] - poly[i - 1][1]));
+    const len = cum[cum.length - 1] || 1e-6, start = L.v.length;
+    for (let i = 0; i < poly.length - 1; i++) {
+      const el = cum[i + 1] - cum[i], n = Math.max(1, Math.ceil(el / STEP));
+      for (let k = 0; k < n; k++) { const u = k / n; L.v.push({ x: mix(poly[i][0], poly[i + 1][0], u), z: -mix(poly[i][1], poly[i + 1][1], u), seg: si, u: (cum[i] + el * u) / len }); }
+    }
+    const e = poly[poly.length - 1];
+    L.v.push({ x: e[0], z: -e[1], seg: si, u: 1 });
+    L.segRange.push([start, L.v.length - 1]);
+  });
+  L.v.forEach((v, i) => {
+    const a = L.v[Math.max(0, i - 1)], b = L.v[Math.min(L.v.length - 1, i + 1)];
+    let dx = b.x - a.x, dz = b.z - a.z; const n = Math.hypot(dx, dz) || 1; dx /= n; dz /= n;
+    v.nx = -dz; v.nz = dx;
+  });
+  L.T = {}; L.F = {}; L.info = {};
+  for (const day of DAYS) {
+    const S = L.sched[day], n = L.v.length;
+    const Tf = new Float32Array(n), Tb = new Float32Array(n), Ff = new Float32Array(n), Fb = new Float32Array(n);
+    L.v.forEach((v, i) => {
+      const s = S.seg[v.seg];
+      Tf[i] = s[0] != null ? mix(s[0], s[1], v.u) : NaN;
+      Tb[i] = s[2] != null ? mix(s[2], s[3], 1 - v.u) : NaN;
+      Ff[i] = s[4] != null ? mix(s[4], s[5], v.u) : NaN;
+      Fb[i] = s[6] != null ? mix(s[6], s[7], 1 - v.u) : NaN;
+    });
+    let lastDep = -1, endT = -1, firstDep = 1e9;
+    for (const r of S.st) for (const d of r) if (d && d[0] > lastDep) lastDep = d[0];
+    for (const r of S.first) for (const f of r) if (f != null && f < firstDep) firstDep = f;
+    for (const s of S.seg) { if (s[1] != null && s[1] > endT) endT = s[1]; if (s[3] != null && s[3] > endT) endT = s[3]; }
+    L.T[day] = [Tf, Tb]; L.F[day] = [Ff, Fb];
+    L.info[day] = { lastDep, endT: Math.max(endT, lastDep), firstDep, has: lastDep >= 0 };
+  }
+});
+const has = (L) => L.info[state.day].has;
+const lineName = (L) => L.grp === "sncb" ? `${t("kind").sncb} ${L.sym}` : `${t("kind")[L.grp]} ${L.sym}`;
+
+// arrêts dédoublonnés par nom
+const stations = new Map();
+lines.forEach((L) => L.st.forEach((s, k) => {
+  let S = stations.get(s[0]);
+  if (!S) { S = { fr: s[0], nl: s[1], x: 0, z: 0, n: 0, serv: [] }; stations.set(s[0], S); }
+  S.x += s[2]; S.z += -s[3]; S.n++; S.serv.push([L.li, k]);
+}));
+for (const S of stations.values()) { S.x /= S.n; S.z /= S.n; S.lines = [...new Set(S.serv.map((x) => x[0]))]; S.slug = slug(S.fr); }
+const stationList = [...stations.values()];
+const bySlug = new Map(stationList.map((S) => [S.slug, S]));
+$("#countLines").textContent = lines.length;
+$("#countStations").textContent = stationList.length;
+
+// ---------------------------------------------------------------- scène
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+$("#stage").appendChild(renderer.domElement);
+const labelRenderer = new CSS2DRenderer({ element: $("#labels") });
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 800);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.47; controls.minDistance = 2; controls.maxDistance = 160;
+camera.position.set(-2, 21, 25); controls.target.set(0.5, 2, -1.5);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.6, 0.45, 0.25);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const isDark = () => { const a = document.documentElement.getAttribute("data-theme"); return a === "dark" || (a !== "light" && matchMedia("(prefers-color-scheme: dark)").matches); };
+
+// sol : quadrillage qui se fond dans l'arrière-plan (translucide pour laisser voir le métro)
+const THEME = {
+  light: { bg: "#F2F2EE", ground: "#F8F8F4", grid: "#E4E4DD", green: "#E3EBD8", water: "#D3E2EC", river: "#B7CFDF", road: "#E2E0D8", road2: "#EAE8E1", region: "#A9ABA6", shadow: 0x2d2d2d, shadowA: 0.07, well: 0x9a9c98 },
+  dark:  { bg: "#0B1120", ground: "#0E1627", grid: "#18223A", green: "#11262C", water: "#112B4E", river: "#22446C", road: "#25314F", road2: "#1C2742", region: "#4A5878", shadow: 0x000000, shadowA: 0.35, well: 0x3a4766 },
+};
+const groundMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false,
+  uniforms: { uGround: { value: new THREE.Color() }, uGrid: { value: new THREE.Color() }, uBg: { value: new THREE.Color() }, uAlpha: { value: 1 } },
+  vertexShader: `varying vec2 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform vec3 uGround, uGrid, uBg; uniform float uAlpha; varying vec2 vP;
+    float gl(vec2 p, float s, float w){ vec2 g = abs(fract(p / s - 0.5) - 0.5) * s / fwidth(p); return 1.0 - min(min(g.x, g.y) / w, 1.0); }
+    void main(){
+      float major = gl(vP, 5.0, 1.2), minor = gl(vP, 1.0, 0.9) * 0.5;
+      float fade = 1.0 - smoothstep(24.0, 60.0, length(vP));
+      vec3 c = mix(uGround, uGrid, max(major, minor));
+      gl_FragColor = vec4(mix(uBg, c, fade), mix(1.0, uAlpha, fade));
+      #include <colorspace_fragment>
+    }`,
+});
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
+ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.renderOrder = 10; scene.add(ground);
+
+const base = new THREE.Group(); scene.add(base);
+const baseMats = {};
+const lineMats = [];
+if (window.BLT_BASE) {
+  const BD = window.BLT_BASE;
+  const fill = (polys, key, order) => {
+    const geos = [];
+    for (const ring of polys) {
+      if (ring.length < 3) continue;
+      const g = new THREE.ShapeGeometry(new THREE.Shape(ring.map(([x, y]) => new THREE.Vector2(x, y)))); g.rotateX(-Math.PI / 2);
+      geos.push(g);
+    }
+    if (!geos.length) return;
+    const m = new THREE.MeshBasicMaterial({ depthWrite: false, side: THREE.DoubleSide, transparent: true });
+    const mesh = new THREE.Mesh(mergeGeometries(geos), m); mesh.renderOrder = order; base.add(mesh); baseMats[key] = m;
+  };
+  const strokes = (list, key, order, width, dashed) => {
+    const pos = [];
+    for (const l of list) for (let i = 1; i < l.length; i++) pos.push(l[i - 1][0], 0, -l[i - 1][1], l[i][0], 0, -l[i][1]);
+    if (!pos.length) return;
+    const g = new LineSegmentsGeometry(); g.setPositions(pos);
+    const m = new LineMaterial({ linewidth: width, dashed: !!dashed, dashSize: 0.35, gapSize: 0.25, depthWrite: false, transparent: true });
+    const o = new LineSegments2(g, m); if (dashed) o.computeLineDistances(); o.renderOrder = order; o.frustumCulled = false; base.add(o); baseMats[key] = m; lineMats.push(m);
+  };
+  fill(BD.green, "green", 11);
+  fill(BD.water, "water", 12);
+  strokes(BD.canal, "river", 13, 2.2);
+  strokes(BD.roads.filter((r) => r[0] === 0).map((r) => r.slice(1)), "road2", 14, 1.2);
+  strokes(BD.roads.filter((r) => r[0] === 1).map((r) => r.slice(1)), "road", 15, 2.4);
+  strokes(BD.region.map((r) => [...r, r[0]]), "region", 16, 1.6, true);
+}
+
+// ombres du réseau au sol
+const shadowMat = new THREE.MeshBasicMaterial({ color: 0x2d2d2d, transparent: true, opacity: 0.07, depthWrite: false });
+{
+  const pos = [], W2 = 0.13;
+  for (const L of lines) { if (L.grp === "noctis") continue; for (const [a, b] of L.segRange) for (let i = a; i < b; i++) {
+    const v = L.v[i], w = L.v[i + 1];
+    pos.push(v.x + v.nx * W2, 0, v.z + v.nz * W2, v.x - v.nx * W2, 0, v.z - v.nz * W2, w.x + w.nx * W2, 0, w.z + w.nz * W2,
+             v.x - v.nx * W2, 0, v.z - v.nz * W2, w.x - w.nx * W2, 0, w.z - w.nz * W2, w.x + w.nx * W2, 0, w.z + w.nz * W2);
+  } }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  var shadows = new THREE.Mesh(g, shadowMat); shadows.renderOrder = 17; shadows.frustumCulled = false; scene.add(shadows);
+}
+
+// voies
+const pairs = [];
+lines.forEach((L) => { for (const dir of [0, 1]) for (const [a, b] of L.segRange) for (let i = a; i < b; i++) pairs.push(L.li, dir, i); });
+const laneGeo = new LineSegmentsGeometry();
+laneGeo.setPositions(new Float32Array(pairs.length / 3 * 6));
+laneGeo.setColors(new Float32Array(pairs.length / 3 * 6));
+const laneMat = new LineMaterial({ linewidth: 2, vertexColors: true, worldUnits: false });
+lineMats.push(laneMat);
+const lanes = new LineSegments2(laneGeo, laneMat); lanes.frustumCulled = false; scene.add(lanes);
+
+// puits d'accès du métro (vue par étages)
+const wellMat = new THREE.LineBasicMaterial({ color: 0x9a9c98, transparent: true, opacity: 0 });
+const metroStations = stationList.filter((S) => S.lines.some((li) => lines[li].grp === "metro"));
+const wellGeo = new THREE.BufferGeometry(); wellGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(metroStations.length * 6), 3));
+const wells = new THREE.LineSegments(wellGeo, wellMat); wells.frustumCulled = false; scene.add(wells);
+
+// arrêts
+const dotTex = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
+  g.fillStyle = "#2d2d2d"; g.beginPath(); g.arc(32, 32, 30, 0, 7); g.fill();
+  g.fillStyle = "#fff"; g.beginPath(); g.arc(32, 32, 20, 0, 7); g.fill();
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+})();
+const stopRefs = []; lines.forEach((L) => L.st.forEach((s, k) => stopRefs.push([L.li, k])));
+const stopGeo = new THREE.BufferGeometry();
+stopGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(stopRefs.length * 3), 3));
+const stopMat = new THREE.PointsMaterial({ size: 6, sizeAttenuation: false, map: dotTex, transparent: true, alphaTest: 0.5 });
+const stops = new THREE.Points(stopGeo, stopMat); stops.frustumCulled = false; stops.renderOrder = 2; scene.add(stops);
+lines.forEach((L) => { L.stV = L.st.map((s, k) => k === 0 ? 0 : L.segRange[k - 1][1]); });
+
+// véhicules et traînées
+const glowTex = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.28, "rgba(255,255,255,1)"); gr.addColorStop(0.36, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+})();
+const TRAIL = 7;
+const maxTr = lines.reduce((s, L) => s + L.geom.length * 4, 0);
+const mkPoints = (n, size, order) => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  const m = new THREE.PointsMaterial({ size, sizeAttenuation: false, map: glowTex, vertexColors: true, transparent: true, depthTest: false, depthWrite: false });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = order; scene.add(p); return { g, m, p };
+};
+const trains = mkPoints(maxTr, 20, 30);
+const trails = mkPoints(maxTr * TRAIL, 10, 29);
+
+// plan de l'heure et axe
+const B = { x0: 1e9, x1: -1e9, z0: 1e9, z1: -1e9 };
+for (const S of stationList) { B.x0 = Math.min(B.x0, S.x); B.x1 = Math.max(B.x1, S.x); B.z0 = Math.min(B.z0, S.z); B.z1 = Math.max(B.z1, S.z); }
+const PW = B.x1 - B.x0 + 4, PD = B.z1 - B.z0 + 4;
+const nowPlane = new THREE.Mesh(new THREE.PlaneGeometry(PW, PD), new THREE.MeshBasicMaterial({ color: 0xe0533f, transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false }));
+nowPlane.rotation.x = -Math.PI / 2; nowPlane.position.set((B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2); nowPlane.renderOrder = 20; scene.add(nowPlane);
+const nowEdge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(PW, PD)), new THREE.LineBasicMaterial({ color: 0xe0533f, transparent: true, opacity: 0.55 }));
+nowPlane.add(nowEdge);
+const axis = new THREE.Group(); scene.add(axis);
+const AX = { x: B.x1 + 2, z: B.z1 + 2 };
+{
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute([AX.x, 0, AX.z, AX.x, yTime(H_MAX), AX.z], 3));
+  axis.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x8c9096 })));
+  for (let x = 22 * 60; x <= H_MAX; x += 60) {
+    const e = document.createElement("div"); e.className = "lbl-ax"; e.textContent = fmt(x);
+    const o = new CSS2DObject(e); o.position.set(AX.x, yTime(x), AX.z); axis.add(o);
+    const tg = new THREE.BufferGeometry(); tg.setAttribute("position", new THREE.Float32BufferAttribute([AX.x - 0.4, yTime(x), AX.z, AX.x + 0.4, yTime(x), AX.z], 3));
+    axis.add(new THREE.Line(tg, new THREE.LineBasicMaterial({ color: 0x8c9096 })));
+  }
+}
+const axNowEl = document.createElement("div"); axNowEl.className = "lbl-now";
+const axNow = new CSS2DObject(axNowEl); axis.add(axNow);
+
+// étiquettes d'étages
+const floorLbls = ["metro", "tram", "sncb"].map((g) => {
+  const e = document.createElement("div"); e.className = "lbl-floor";
+  const o = new CSS2DObject(e); o.position.set(-9, FLOOR[g] + 0.3, 7); scene.add(o); return { o, e, g };
+});
+
+// étiquettes des 19 communes (centres approximatifs)
+const COMMUNES = [
+  ["Anderlecht", "Anderlecht", 50.833, 4.307], ["Auderghem", "Oudergem", 50.816, 4.433], ["Berchem-Sainte-Agathe", "Sint-Agatha-Berchem", 50.865, 4.292],
+  ["Bruxelles", "Brussel", 50.847, 4.3525], ["Etterbeek", "Etterbeek", 50.836, 4.386], ["Evere", "Evere", 50.870, 4.402], ["Forest", "Vorst", 50.810, 4.324],
+  ["Ganshoren", "Ganshoren", 50.871, 4.309], ["Ixelles", "Elsene", 50.828, 4.372], ["Jette", "Jette", 50.878, 4.326], ["Koekelberg", "Koekelberg", 50.862, 4.329],
+  ["Molenbeek", "Molenbeek", 50.855, 4.322], ["Saint-Gilles", "Sint-Gillis", 50.827, 4.346], ["Saint-Josse", "Sint-Joost", 50.853, 4.370],
+  ["Schaerbeek", "Schaarbeek", 50.867, 4.374], ["Uccle", "Ukkel", 50.800, 4.337], ["Watermael-Boitsfort", "Watermaal-Bosvoorde", 50.799, 4.415],
+  ["Woluwe-Saint-Lambert", "Sint-Lambrechts-Woluwe", 50.847, 4.430], ["Woluwe-Saint-Pierre", "Sint-Pieters-Woluwe", 50.829, 4.444],
+].map(([fr, nl, la, lo]) => {
+  const e = document.createElement("div"); e.className = "lbl-com";
+  const o = new CSS2DObject(e); o.position.set((lo - 4.3528) * 111.32 * Math.cos(50.8466 * Math.PI / 180), 0.02, -(la - 50.8466) * 110.574); scene.add(o);
+  return { fr, nl, e, o };
+});
+
+// étiquettes d'arrêts
+const scored = stationList.map((S) => ({ S, s: S.lines.length * 2 + (S.lines.some((li) => lines[li].grp === "metro") ? 3 : 0) + (S.lines.some((li) => lines[li].grp === "sncb") ? 2 : 0) })).sort((a, b) => b.s - a.s);
+const labelled = [];
+for (const { S } of scored) {
+  if (labelled.length >= 26) break;
+  if (labelled.some((P) => Math.hypot(P.x - S.x, P.z - S.z) < 1.9)) continue;
+  labelled.push(S);
+}
+for (const L of lines.filter((l) => l.grp === "sncb")) for (const nm of [L.from, L.to]) {
+  const S = stations.get(nm); if (!labelled.includes(S) && !labelled.some((P) => Math.hypot(P.x - S.x, P.z - S.z) < 2.5)) labelled.push(S);
+}
+for (const S of labelled) { const e = document.createElement("div"); e.className = "lbl-st"; S.lbl = new CSS2DObject(e); S.lblEl = e; scene.add(S.lbl); }
+function renderLabels() {
+  for (const S of labelled) { const o = stOther(S.fr, S.nl); S.lblEl.innerHTML = `<b>${esc(stName(S.fr, S.nl))}</b>${o ? `<i>${esc(o)}</i>` : ""}`; }
+  for (const c of COMMUNES) c.e.textContent = lang === "nl" ? c.nl : c.fr;
+  for (const f of floorLbls) f.e.textContent = t("fl_" + f.g);
+}
+
+// ---------------------------------------------------------------- positions
+let W = { time: 0, floor: 0, flat: 0 }; W[state.view === "heat" ? "flat" : state.view] = 1;
+let WT = { ...W };
+let offKm = 0.06, pxPerKm = 20, FOCUS = null;
+function lineY(L) {
+  const lift = FOCUS && FOCUS.has(L.li) ? 0.06 : FOCUS ? -0.03 : 0;
+  return W.time * yTime(L.info[state.day].lastDep) + W.floor * FLOOR[L.grp] + 0.03 + L.li * 0.0015 + lift;
+}
+function laneXZ(L, i, dir) {
+  const v = L.v[i], side = (dir === 0 ? 1 : -1) * (L.leftHand ? 1 : -1);
+  return [v.x + v.nx * offKm * side, v.z + v.nz * offKm * side];
+}
+function stationY(S) { let m = -99; for (const li of S.lines) if (has(lines[li])) m = Math.max(m, lineY(lines[li])); return m === -99 ? 0 : m; }
+function focusSet() {
+  if (state.route) return state.route.lines;
+  if (state.sel != null) return new Set([state.sel]);
+  if (state.station) return new Set(stations.get(state.station).lines);
+  return null;
+}
+function updatePositions() {
+  FOCUS = focusSet();
+  const P = laneGeo.attributes.instanceStart.data.array;
+  const ys = lines.map((L) => has(L) ? lineY(L) : -999);
+  for (let p = 0, j = 0; p < pairs.length; p += 3, j += 6) {
+    const L = lines[pairs[p]], dir = pairs[p + 1], i = pairs[p + 2], y = ys[L.li];
+    const a = laneXZ(L, i, dir), b = laneXZ(L, i + 1, dir);
+    P[j] = a[0]; P[j + 1] = y; P[j + 2] = a[1]; P[j + 3] = b[0]; P[j + 4] = y; P[j + 5] = b[1];
+  }
+  laneGeo.attributes.instanceStart.data.needsUpdate = true;
+  const SP = stopGeo.attributes.position.array;
+  stopRefs.forEach(([li, k], n) => { const L = lines[li], v = L.v[L.stV[k]]; SP[n * 3] = v.x; SP[n * 3 + 1] = (FOCUS && !FOCUS.has(li)) ? -999 : ys[li] + 0.004; SP[n * 3 + 2] = v.z; });
+  stopGeo.attributes.position.needsUpdate = true;
+  const WP = wellGeo.attributes.position.array, my = W.floor * FLOOR.metro + 0.03;
+  metroStations.forEach((S, n) => { WP.set([S.x, my, S.z, S.x, 0, S.z], n * 6); });
+  wellGeo.attributes.position.needsUpdate = true;
+  wellMat.opacity = 0.55 * W.floor;
+  for (const S of labelled) S.lbl.position.set(S.x, stationY(S), S.z);
+  shadows.visible = W.flat < 0.98; shadowMat.opacity = (shadowMat.userData.a || 0.07) * (1 - W.flat);
+  groundMat.uniforms.uAlpha.value = 1 - 0.3 * W.floor;
+  for (const k in baseMats) baseMats[k].opacity = 1 - 0.45 * W.floor; // laisse deviner le métro sous la ville
+  axis.visible = W.time > 0.5;
+  nowPlane.visible = W.time > 0.02;
+  nowPlane.material.opacity = (isDark() ? 0.035 : 0.06) * W.time; nowEdge.material.opacity = 0.55 * W.time;
+  floorLbls.forEach(({ e }) => { e.style.opacity = W.floor; });
+}
+
+// ---------------------------------------------------------------- couleurs
+const C = new THREE.Color(), deadC = new THREE.Color(), bgC = new THREE.Color();
+lines.forEach((L) => { L.c = new THREE.Color(L.color); });
+// rampe séquentielle bleue (une seule teinte, clair → foncé ; inversée en sombre)
+const RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"].map((h) => new THREE.Color(h));
+const HEAT0 = 22 * 60, HEAT1 = 25 * 60 + 30;
+let DARK = isDark();
+function heatColor(x, out) {
+  let u = Math.max(0, Math.min(1, (x - HEAT0) / (HEAT1 - HEAT0)));
+  if (DARK) u = 1 - u;
+  const f = u * (RAMP.length - 1), i = Math.min(RAMP.length - 2, Math.floor(f));
+  return out.copy(RAMP[i]).lerp(RAMP[i + 1], f - i);
+}
+function posAt(L, si, dir, d, a, time) {
+  const f = a > d ? Math.max(0, Math.min(1, (time - d) / (a - d))) : 0, u = dir === 0 ? f : 1 - f;
+  const [va, vb] = L.segRange[si];
+  let k = va; while (k < vb - 1 && L.v[k + 1].u < u) k++;
+  const w = L.v[k + 1].u > L.v[k].u ? (u - L.v[k].u) / (L.v[k + 1].u - L.v[k].u) : 0;
+  const p0 = laneXZ(L, k, dir), p1 = laneXZ(L, k + 1, dir);
+  return [mix(p0[0], p1[0], w), mix(p0[1], p1[1], w)];
+}
+function updateColors() {
+  const day = state.day, now = state.t, F = FOCUS, heat = state.view === "heat";
+  const A = laneGeo.attributes.instanceColorStart.data.array;
+  for (let p = 0, j = 0; p < pairs.length; p += 3, j += 6) {
+    const L = lines[pairs[p]], dir = pairs[p + 1], i = pairs[p + 2];
+    const T = L.T[day][dir], Fi = L.F[day][dir], dim = F && !F.has(L.li);
+    for (let e = 0; e < 2; e++) {
+      const tv = T[i + e];
+      if (heat) { if (!isNaN(tv) && tv >= HEAT0) heatColor(tv, C); else C.copy(deadC); if (dim) C.lerp(bgC, 0.8); }
+      else if (!isNaN(tv) && now < tv && now >= Fi[i + e]) { C.copy(L.c); if (dim) C.lerp(bgC, 0.8); }
+      else { C.copy(deadC); if (dim) C.lerp(bgC, 0.55); }
+      A[j + e * 3] = C.r; A[j + e * 3 + 1] = C.g; A[j + e * 3 + 2] = C.b;
+    }
+  }
+  laneGeo.attributes.instanceColorStart.data.needsUpdate = true;
+  // véhicules (premiers et derniers) avec traînée
+  const TP = trains.g.attributes.position.array, TC = trains.g.attributes.color.array;
+  const RP = trails.g.attributes.position.array, RC = trails.g.attributes.color.array;
+  let n = 0, m = 0;
+  if (!heat) for (const L of lines) {
+    if (!has(L) || (F && !F.has(L.li))) continue;
+    const y = lineY(L) + 0.02;
+    L.sched[day].seg.forEach((s, si) => {
+      for (const idx of [0, 2, 4, 6]) {
+        const dir = (idx / 2) % 2, d = s[idx], a = s[idx + 1];
+        if (d == null || !(now >= d && now < a)) continue;
+        const [x, z] = posAt(L, si, dir, d, a, now);
+        TP.set([x, y, z], n * 3); TC.set([L.c.r, L.c.g, L.c.b], n * 3); n++;
+        for (let k = 1; k <= TRAIL; k++) {
+          const tk = now - k * 0.22; if (tk < d) break;
+          const [tx, tz] = posAt(L, si, dir, d, a, tk);
+          C.copy(L.c).lerp(bgC, k / (TRAIL + 1));
+          RP.set([tx, y, tz], m * 3); RC.set([C.r, C.g, C.b], m * 3); m++;
+        }
+      }
+    });
+  }
+  trains.g.setDrawRange(0, n); trains.g.attributes.position.needsUpdate = true; trains.g.attributes.color.needsUpdate = true;
+  trails.g.setDrawRange(0, m); trails.g.attributes.position.needsUpdate = true; trails.g.attributes.color.needsUpdate = true;
+  const yt = yTime(now); nowPlane.position.y = yt; axNow.position.set(AX.x, yt, AX.z); axNowEl.textContent = fmt(now);
+  for (const S of labelled) {
+    const on = S.lines.some((li) => { const I = lines[li].info[day]; return I.has && (heat || (now < I.endT && now >= I.firstDep)); });
+    S.lblEl.classList.toggle("fade", !on || (F && !S.lines.some((li) => F.has(li))));
+  }
+}
+function applyTheme() {
+  DARK = isDark();
+  const P = DARK ? THEME.dark : THEME.light;
+  bgC.set(css("--bg")); deadC.set(css("--dead"));
+  groundMat.uniforms.uGround.value.set(P.ground); groundMat.uniforms.uGrid.value.set(P.grid); groundMat.uniforms.uBg.value.set(P.bg);
+  for (const k in baseMats) baseMats[k].color.set(P[k]);
+  shadowMat.color.set(P.shadow); shadowMat.userData.a = P.shadowA;
+  wellMat.color.set(P.well);
+  scene.fog = new THREE.Fog(new THREE.Color(P.bg), 70, 170);
+  scene.background = new THREE.Color(P.bg);
+  bloom.enabled = isDark();
+  for (const o of [trains, trails]) { o.m.blending = isDark() ? THREE.AdditiveBlending : THREE.NormalBlending; o.m.needsUpdate = true; }
+  drawLegend();
+  updatePositions(); updateColors();
+}
+function drawLegend() {
+  const stops = [];
+  for (let k = 0; k <= 10; k++) { const c = heatColor(HEAT0 + (HEAT1 - HEAT0) * k / 10, new THREE.Color()); stops.push(`#${c.getHexString()} ${k * 10}%`); }
+  $("#legendBar").style.background = `linear-gradient(90deg, ${stops.join(",")})`;
+  $("#legendTicks").innerHTML = [22 * 60, 23 * 60, 24 * 60, 25 * 60, HEAT1].map((x) => `<span style="left:${(x - HEAT0) / (HEAT1 - HEAT0) * 100}%">${fmt(x)}</span>`).join("");
+}
+
+// ---------------------------------------------------------------- liste
+const listBody = $("#listBody");
+function litFrac(L) {
+  const [Tf, Tb] = L.T[state.day], [Ff, Fb] = L.F[state.day]; let on = 0, tot = 0;
+  for (let i = 0; i < Tf.length; i++) for (const [T, F] of [[Tf, Ff], [Tb, Fb]]) { if (!isNaN(T[i])) { tot++; if (state.t < T[i] && state.t >= F[i]) on++; } }
+  return tot ? on / tot : 0;
+}
+function lineStatus(L) {
+  const I = L.info[state.day], now = state.t;
+  if (!I.has) return { cls: "done", txt: t("noService") };
+  if (now < I.firstDep) return { cls: "done", txt: t("first")(fmt(I.firstDep)) };
+  if (now < I.lastDep) return { cls: "", txt: t("in")(dur(I.lastDep - now)) };
+  if (now < I.endT) return { cls: "run", txt: t("running") };
+  return { cls: "done", txt: t("done") };
+}
+const badge = (L, sz = "") => `<span class="badge ${sz}" style="--lc:${L.color}">${esc(L.sym)}</span>`;
+function renderList() {
+  const q = $("#q").value.trim().toLowerCase();
+  $("#qClear").style.display = q ? "block" : "none";
+  let html = "";
+  if (q) {
+    const hits = stationList.filter((S) => S.fr.toLowerCase().includes(q) || (S.nl || "").toLowerCase().includes(q))
+      .sort((a, b) => (b.fr.toLowerCase().startsWith(q) - a.fr.toLowerCase().startsWith(q)) || b.lines.length - a.lines.length).slice(0, 12);
+    if (hits.length) html += `<div class="group-head">${t("stopsHead")}</div>` + hits.map((S) => {
+      const names = S.lines.map((li) => lineName(lines[li]));
+      return `<button type="button" class="row" data-station="${esc(S.fr)}"><span class="badge sm st"></span><span><span class="row-name">${esc(stName(S.fr, S.nl))}</span><span class="row-sub">${esc(names.slice(0, 5).join(" · "))}${names.length > 5 ? " " + t("andMore")(names.length - 5) : ""}</span></span><span></span></button>`;
+    }).join("");
+  }
+  let items = [...lines];
+  if (q) items = items.filter((L) => L.sym.toLowerCase() === q || lineName(L).toLowerCase().includes(q) || `${L.from} ${L.to}`.toLowerCase().includes(q));
+  const k = (L) => L.info[state.day].has ? L.info[state.day].lastDep : (state.sort === "late" ? -1 : 1e9);
+  if (state.sort === "early") items.sort((a, b) => k(a) - k(b));
+  if (state.sort === "late") items.sort((a, b) => k(b) - k(a));
+  if (q && items.length) html += `<div class="group-head">${t("linesHead")}</div>`;
+  let g = null;
+  for (const L of items) {
+    if (!q && state.sort === "op" && g !== L.grp) { g = L.grp; html += `<div class="group-head">${t("g_" + g)}</div>`; }
+    const st = lineStatus(L), I = L.info[state.day];
+    const [fs, ts] = [L.st[0], L.st[L.st.length - 1]];
+    html += `<button type="button" class="row${st.cls === "done" ? " done" : ""}" data-line="${L.li}" style="--lc:${L.color}" aria-current="${state.sel === L.li}">
+      ${badge(L)}<span><span class="row-name">${esc(lineName(L))}</span><span class="row-sub">${esc(stName(fs[0], fs[1]))} – ${esc(stName(ts[0], ts[1]))}</span></span>
+      <span class="row-time"><b>${I.has ? fmt(I.lastDep) : "—"}</b><span class="${st.cls}">${st.txt}</span></span>
+      <span></span><span class="row-bar"><i style="width:${(litFrac(L) * 100).toFixed(1)}%"></i></span></button>`;
+  }
+  if (!html) html = `<p style="padding:18px 16px;color:var(--ink2)">${esc(t("noMatch")(q))}</p>`;
+  listBody.innerHTML = html;
+}
+
+// ---------------------------------------------------------------- panneaux de droite
+const SIDES = ["detail", "planner", "compare", "help"];
+function openSide(id) {
+  for (const s of SIDES) $("#" + s).hidden = s !== id;
+  $("#routeBtn").setAttribute("aria-expanded", String(id === "planner"));
+  $("#cmpBtn").setAttribute("aria-expanded", String(id === "compare"));
+  $("#helpBtn").setAttribute("aria-expanded", String(id === "help"));
+}
+document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => { openSide(null); if (b.dataset.close === "planner" && state.route) { state.route = null; updatePositions(); updateColors(); } }));
+
+const dHead = $("#dHead"), dBody = $("#dBody");
+const X_BTN = `<button type="button" class="x-btn" id="dClose"><svg viewBox="0 0 14 14"><path d="M2 2l10 10M12 2 2 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>`;
+const hubScore = (name) => { const S = stations.get(name); return S ? S.lines.length : 0; };
+const dayDate = (d) => D.meta.days[d].split("-").reverse().join("/");
+function keyStops(L, dir) {
+  const n = L.st.length, order = dir === 0 ? [...Array(n - 1).keys()] : [...Array(n - 1).keys()].map((i) => n - 1 - i);
+  const rest = order.slice(1).filter((k) => L.sched[state.day].st[k][dir]).sort((a, b) => hubScore(L.st[b][0]) - hubScore(L.st[a][0])).slice(0, 3);
+  return [order[0], ...rest].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+}
+function dayBar(getT) {
+  const vals = DAYS.map(getT), best = Math.max(...vals.map((v) => v ?? -1));
+  return `<div class="daybar">${DAYS.map((d, i) => `<div class="${d === state.day ? "cur" : ""}"><small>${t(d)}</small><b style="${vals[i] === best && best >= 0 ? "color:var(--ok)" : ""}">${vals[i] != null && vals[i] >= 0 ? fmt(vals[i]) : "—"}</b></div>`).join("")}</div>`;
+}
+function linkChip(hash) { return `<button type="button" class="chip" data-copy="${esc(hash)}">${t("copy")}</button>`; }
+function renderLine() {
+  const L = lines[state.sel], S = L.sched[state.day], now = state.t, I = L.info[state.day];
+  const [fs, ts] = [L.st[0], L.st[L.st.length - 1]];
+  const FROM = stName(fs[0], fs[1]), TO = stName(ts[0], ts[1]);
+  $("#detail").style.setProperty("--lc", L.color);
+  dHead.innerHTML = `${X_BTN}<div class="d-title">${badge(L, "lg")}<div><h2>${esc(lineName(L))}</h2><p class="d-en">${esc(FROM)} – ${esc(TO)}</p></div></div>
+    <div class="d-meta"><span>${L.op} · ${t("stopsN")(L.st.length)} · ${String(L.len).replace(".", ",")} km</span><span class="chip">${t(state.day)}</span>${I.has ? `<span class="chip">${t("service")} ${fmt(I.firstDep)} – ${fmt(I.lastDep)}</span>` : ""}${linkChip(L.id)}</div>`;
+  let html = `<p class="d-sec">${t("byDay")}</p>${dayBar((d) => L.info[d].has ? L.info[d].lastDep : null)}`;
+  if (!I.has) { dBody.innerHTML = html + `<p class="d-sec">${t("noServiceDay")}</p>`; return; }
+  html += `<p class="d-sec">${t("perDir")}</p>`;
+  for (const dir of [0, 1]) {
+    const term = dir === 0 ? TO : FROM;
+    html += `<div class="dir"><div class="dir-h"><b>${t("toward")} ${esc(term)}</b><span>${esc(dir === 0 ? FROM : TO)} → ${esc(term)}</span></div>`;
+    for (const k of keyStops(L, dir)) {
+      const d = S.st[k][dir]; if (!d) continue;
+      html += `<div class="dep${now >= d[0] ? " gone" : ""}"><div class="dep-top"><span>${esc(stName(L.st[k][0], L.st[k][1]))}<small>${t("dep")}</small></span><b>${fmt(d[0])}</b></div>
+        <p class="dep-to"><strong>${esc(L.heads[d[1]])}</strong> (${t("arr")} ${fmt(d[2])})</p>
+        ${d.length > 3 ? `<p class="dep-full">${t("lastTo")(esc(term), fmt(d[3]), fmt(d[4]))}</p>` : ""}</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `<p class="d-sec">${t("perStop")}</p><table class="tt"><thead><tr><th>${t("stop")}</th><th>→ ${esc(TO)}</th><th>→ ${esc(FROM)}</th></tr></thead><tbody>`;
+  const cell = (d) => d ? `<td class="${now >= d[0] ? "gone" : ""}"><b>${fmt(d[0])}</b><small>${esc(L.heads[d[1]])}</small></td>` : `<td class="gone"><b>—</b></td>`;
+  L.st.forEach((s, k) => { html += `<tr><td data-station="${esc(s[0])}">${esc(stName(s[0], s[1]))}</td>${cell(S.st[k][0])}${cell(S.st[k][1])}</tr>`; });
+  html += `</tbody></table><p class="src">${esc(t("srcLine")(L.op, dayDate(state.day)))}</p>`;
+  dBody.innerHTML = html;
+}
+function renderStation() {
+  const St = stations.get(state.station), now = state.t;
+  $("#detail").style.setProperty("--lc", css("--ink"));
+  const o = stOther(St.fr, St.nl);
+  dHead.innerHTML = `${X_BTN}<div class="d-title"><span class="badge lg st"></span><div><h2>${esc(stName(St.fr, St.nl))}</h2>${o ? `<p class="d-en">${esc(o)}</p>` : ""}</div></div>
+    <div class="d-meta"><span>${t("linesN")(St.lines.length)}</span><span class="chip">${t(state.day)}</span>${linkChip(St.slug)}</div>`;
+  const lastAt = (d) => { let m = -1; for (const [li, k] of St.serv) for (const e of lines[li].sched[d].st[k]) if (e && e[0] > m) m = e[0]; return m < 0 ? null : m; };
+  let html = `<p class="d-sec">${t("byDay")}</p>${dayBar(lastAt)}<p class="d-sec">${t("fromStop")}</p>`;
+  const byLine = new Map();
+  for (const [li, k] of St.serv) { if (!byLine.has(li)) byLine.set(li, []); byLine.get(li).push(k); }
+  const key = (s) => s.normalize("NFD").replace(/[^a-zA-Z]/g, "").toLowerCase().slice(0, 4);
+  for (const [li, ks] of byLine) {
+    const L = lines[li], S = L.sched[state.day];
+    if (!has(L)) continue;
+    const [fs, ts] = [L.st[0], L.st[L.st.length - 1]];
+    html += `<div class="sline"><button type="button" class="sline-h" data-line="${li}">${badge(L, "sm")}${esc(lineName(L))}</button>`;
+    for (const dir of [0, 1]) {
+      const d = ks.map((k) => S.st[k][dir]).filter(Boolean).sort((a, b) => b[0] - a[0])[0];
+      const term = dir === 0 ? stName(ts[0], ts[1]) : stName(fs[0], fs[1]);
+      if (!d) { html += `<div class="sdep gone"><span>${t("toward")} ${esc(term)}</span><b style="font-size:13px">${t("none")}</b></div>`; continue; }
+      const dest = L.heads[d[1]];
+      html += `<div class="sdep${now >= d[0] ? " gone" : ""}"><span>${t("toward")} ${esc(term)}${key(dest) !== key(term) ? ` · ${t("until")} ${esc(dest)}` : ""}</span><b>${fmt(d[0])}</b></div>`;
+    }
+    html += `</div>`;
+  }
+  dBody.innerHTML = html;
+}
+function renderDetail() {
+  if (state.sel == null && !state.station) { if (!$("#detail").hidden) openSide(null); return; }
+  if ($("#detail").hidden) openSide("detail");
+  state.sel != null ? renderLine() : renderStation();
+  $("#dClose").addEventListener("click", clearSel);
+}
+function refreshPanels() { renderList(); renderDetail(); if (!$("#compare").hidden) renderCompare(); }
+function setHash(h) { try { history.replaceState(null, "", h ? "#" + h : location.pathname + location.search); } catch {} }
+function clearSel() { state.sel = null; state.station = null; setHash(""); refreshPanels(); updatePositions(); updateColors(); }
+dHead.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-copy]"); if (!b) return;
+  const inFrame = window.top !== window;
+  const url = (inFrame ? ARTIFACT_URL : location.href.split("#")[0]) + "#" + b.dataset.copy;
+  try { await navigator.clipboard.writeText(url); say(t("copied") + " : " + url); }
+  catch { say(t("copyFail") + "<br><input value=\"" + esc(url) + "\" style=\"width:100%;margin-top:6px\" onclick=\"this.select()\">", true); }
+});
+
+// ---------------------------------------------------------------- caméra
+let camAnim = null;
+function flyTo(target, dist) {
+  const fromT = controls.target.clone(), fromP = camera.position.clone();
+  const toP = target.clone().add(camera.position.clone().sub(controls.target).normalize().multiplyScalar(dist));
+  const t0 = performance.now(), ms = REDUCED ? 1 : 900;
+  camAnim = (now) => {
+    const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    controls.target.lerpVectors(fromT, target, e); camera.position.lerpVectors(fromP, toP, e);
+    if (k >= 1) camAnim = null;
+  };
+}
+function fitLines(set) {
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9, y = 0;
+  for (const li of set) { const L = lines[li]; y = Math.max(y, lineY(L)); for (const v of L.v) { x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); z0 = Math.min(z0, v.z); z1 = Math.max(z1, v.z); } }
+  if (x0 > x1) return;
+  flyTo(new THREE.Vector3((x0 + x1) / 2, y, (z0 + z1) / 2), Math.max(8, Math.hypot(x1 - x0, z1 - z0) * 1.25));
+}
+function selectLine(li) {
+  state.station = null; state.route = null; state.sel = li; setHash(lines[li].id);
+  updatePositions(); updateColors(); refreshPanels(); fitLines([li]);
+}
+function selectStation(name) {
+  state.sel = null; state.route = null; state.station = name; setHash(stations.get(name).slug);
+  updatePositions(); updateColors(); refreshPanels();
+  const S = stations.get(name); flyTo(new THREE.Vector3(S.x, stationY(S), S.z), 9);
+}
+
+// ---------------------------------------------------------------- calculateur d'itinéraire (CSA inversé)
+const J = (() => {
+  const ST = JD.stations, N = ST.length;
+  const idx = new Map();
+  ST.forEach((s, i) => { idx.set(s[0].toLowerCase(), i); if (s[1]) idx.set(s[1].toLowerCase(), i); });
+  // correspondances à pied (≤ 400 m)
+  const nb = Array.from({ length: N }, () => []);
+  const cell = new Map();
+  ST.forEach((s, i) => { const k = `${Math.floor(s[2] / 0.4)},${Math.floor(s[3] / 0.4)}`; if (!cell.has(k)) cell.set(k, []); cell.get(k).push(i); });
+  ST.forEach((s, i) => {
+    const cx = Math.floor(s[2] / 0.4), cy = Math.floor(s[3] / 0.4);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const j of cell.get(`${cx + dx},${cy + dy}`) || []) {
+      if (j === i) continue; const d = Math.hypot(ST[j][2] - s[2], ST[j][3] - s[3]);
+      if (d <= 0.4) nb[i].push([j, Math.ceil(d / 0.075) + 1]);
+    }
+  });
+  const cache = {};
+  function conns(day) {
+    if (cache[day]) return cache[day];
+    const trips = JD.trips[day] || [];
+    let n = 0; for (const tr of trips) n += JD.patterns[tr[0]].length - 1;
+    const from = new Int32Array(n), to = new Int32Array(n), dep = new Float64Array(n), arr = new Float64Array(n), trip = new Int32Array(n);
+    let c = 0;
+    trips.forEach((tr, ti) => {
+      const pat = JD.patterns[tr[0]]; let time = tr[3];
+      for (let i = 0; i < pat.length - 1; i++) { const nx = time + tr[4 + i]; from[c] = pat[i]; to[c] = pat[i + 1]; dep[c] = time; arr[c] = nx; trip[c] = ti; c++; time = nx; }
+    });
+    const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => dep[b] - dep[a]);
+    return (cache[day] = { from, to, dep, arr, trip, order, trips });
+  }
+  function latest(day, o, target) {
+    const K = conns(day), MIN = 2;
+    const T = new Float64Array(N).fill(-Infinity), best = new Int32Array(N).fill(-1), walkTo = new Int32Array(N).fill(-1), walkT = new Float64Array(N);
+    const ok = new Uint8Array(K.trips.length), exit = new Int32Array(K.trips.length).fill(-1);
+    T[target] = Infinity;
+    for (const [w, wt] of nb[target]) { T[w] = Infinity; walkTo[w] = target; walkT[w] = wt; }
+    for (const c of K.order) {
+      const u = K.from[c], v = K.to[c], tr = K.trip[c];
+      const good = ok[tr] || K.arr[c] + (v === target || T[v] === Infinity ? 0 : MIN) <= T[v];
+      if (!good) continue;
+      if (!ok[tr]) { ok[tr] = 1; exit[tr] = c; }
+      if (K.dep[c] > T[u]) {
+        T[u] = K.dep[c]; best[u] = c; walkTo[u] = -1;
+        for (const [w, wt] of nb[u]) if (K.dep[c] - wt > T[w]) { T[w] = K.dep[c] - wt; best[w] = -1; walkTo[w] = u; walkT[w] = wt; }
+      }
+    }
+    if (!isFinite(T[o])) return null;
+    const legs = []; let s = o, guard = 0;
+    while (s !== target && guard++ < 16) {
+      if (walkTo[s] >= 0) { legs.push({ walk: true, from: s, to: walkTo[s], min: walkT[s] }); s = walkTo[s]; continue; }
+      const c = best[s]; if (c < 0) break;
+      const tr = K.trip[c], e = exit[tr], raw = K.trips[tr];
+      legs.push({ walk: false, from: s, to: K.to[e], dep: K.dep[c], arr: K.arr[e], jl: raw[1], head: JD.heads[raw[2]] });
+      s = K.to[e];
+    }
+    return { dep: T[o], legs };
+  }
+  return { ST, idx, latest, find: (s) => idx.get(String(s).trim().toLowerCase()) };
+})();
+const jName = (i) => stName(J.ST[i][0], J.ST[i][1]);
+const jLine = (jl) => JD.lines[jl]; // [id, nom, symbole, couleur, groupe]
+const jLineName = (jl) => { const l = jLine(jl); return l[4] === "ic" ? l[1] : (l[4] === "sncb" ? `${t("kind").sncb} ${l[2]}` : `${t("kind")[l[4]]} ${l[2]}`); };
+const mapLineOf = (jl) => lines.findIndex((L) => L.id === jLine(jl)[0]);
+const WALK_ICON = `<span class="walk"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="13" cy="4" r="2"/><path d="M11 7.5 8 9.5V14h2v-3.4l1-.6-1.2 5.5-3.3 4.4 1.6 1.2 3.6-4.8.8-3.2 2 2V21h2v-5.6l-2.3-2.3.6-2.8 1.3 1.7H19v-2h-3.1l-2.1-2.8A2 2 0 0 0 11 7.5z"/></svg></span>`;
+function fillStationList() {
+  $("#stList").innerHTML = J.ST.map((s) => `<option value="${esc(stName(s[0], s[1]))}"></option>`).join("");
+}
+function runPlanner() {
+  const out = $("#pResult"), a = J.find($("#pFrom").value), b = J.find($("#pTo").value);
+  if (a == null) { out.innerHTML = `<div class="pbig"><p class="late">${esc(t("pUnknown")($("#pFrom").value))}</p></div>`; return; }
+  if (b == null) { out.innerHTML = `<div class="pbig"><p class="late">${esc(t("pUnknown")($("#pTo").value))}</p></div>`; return; }
+  if (a === b) { out.innerHTML = `<div class="pbig"><p class="late">${t("pSame")}</p></div>`; return; }
+  store.set("route", [J.ST[a][0], J.ST[b][0]]);
+  const r = J.latest(state.day, a, b);
+  if (!r) { out.innerHTML = `<div class="pbig"><p class="late">${t("pNone")}</p></div>`; state.route = null; updatePositions(); updateColors(); return; }
+  const left = r.dep - state.t;
+  let html = `<div class="pbig"><small>${t("pLast")} · ${t(state.day)}</small><b>${fmt(r.dep)}</b><p>${esc(t("pFromStop")(jName(a)))}</p>
+    <p class="${left >= 0 ? "ok" : "late"}">${left >= 0 ? t("pLeft")(dur(left)) : t("pLate")(fmt(state.t))}</p></div>`;
+  const set = new Set();
+  for (const g of r.legs) {
+    if (g.walk) { html += `<div class="leg">${WALK_ICON}<span class="lt">${esc(t("walk")(g.min, jName(g.to)))}</span><span></span></div>`; continue; }
+    const L = jLine(g.jl), mi = mapLineOf(g.jl); if (mi >= 0) set.add(mi);
+    html += `<div class="leg"><span class="badge sm" style="--lc:${L[3]}">${esc(L[2])}</span><span class="lt">${esc(jLineName(g.jl))} → ${esc(g.head)}<small>${esc(jName(g.from))} → ${esc(jName(g.to))}</small></span><span class="tm">${fmt(g.dep)}<small>${fmt(g.arr)}</small></span></div>`;
+  }
+  out.innerHTML = html;
+  state.sel = null; state.station = null; state.route = set.size ? { lines: set } : null;
+  updatePositions(); updateColors(); renderList();
+  if (set.size) fitLines(set);
+}
+const FAR = ["Anvers-Central", "Gand-Saint-Pierre", "Liège-Guillemins", "Namur", "Charleroi-Central", "Mons", "Louvain", "Malines", "Bruges", "Ostende", "Hasselt", "Tournai", "Courtrai", "Ottignies", "Louvain-la-Neuve", "Luxembourg (LU)", "Brussels Airport-Zaventem"];
+const FAR_FROM = ["Bruxelles-Midi", "Bruxelles-Central", "Bruxelles-Nord"];
+function renderFar() {
+  const froms = FAR_FROM.map((s) => J.find(s)).filter((x) => x != null);
+  let html = "";
+  for (const city of FAR) {
+    const b = J.find(city); if (b == null) continue;
+    let best = null, bf = null;
+    for (const a of froms) { const r = J.latest(state.day, a, b); if (r && (!best || r.dep > best.dep)) { best = r; bf = a; } }
+    html += `<button type="button" data-far="${esc(J.ST[b][0])}" data-from="${bf != null ? esc(J.ST[bf][0]) : ""}">${esc(jName(b))}</button><b style="${best && best.dep < state.t ? "color:var(--mute)" : ""}">${best ? fmt(best.dep) : "—"}</b><small>${best ? esc(jName(bf).replace("Bruxelles-", "").replace("Brussel-", "")) : ""}</small>`;
+  }
+  $("#farList").innerHTML = html;
+}
+$("#farList").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-far]"); if (!b || !b.dataset.from) return;
+  $("#pFrom").value = jName(J.find(b.dataset.from)); $("#pTo").value = jName(J.find(b.dataset.far)); runPlanner();
+  $("#planner .d-body").scrollTop = 0;
+});
+$("#pForm").addEventListener("submit", (e) => { e.preventDefault(); runPlanner(); });
+$("#pSwap").addEventListener("click", () => { const a = $("#pFrom").value; $("#pFrom").value = $("#pTo").value; $("#pTo").value = a; });
+function openPlanner() {
+  if (!$("#planner").hidden) { openSide(null); if (state.route) { state.route = null; updatePositions(); updateColors(); } return; }
+  openSide("planner");
+  const saved = store.get("route", null);
+  if (!$("#pFrom").value && saved) { const a = J.find(saved[0]), b = J.find(saved[1]); if (a != null) $("#pFrom").value = jName(a); if (b != null) $("#pTo").value = jName(b); }
+  renderFar();
+}
+
+// ---------------------------------------------------------------- comparaison des jours
+function renderCompare() {
+  let html = `<table class="cmp"><thead><tr><th>${t("line")}</th>${DAYS.map((d) => `<th>${t(d).slice(0, 3)}.</th>`).join("")}</tr></thead><tbody>`;
+  let g = null;
+  for (const L of lines) {
+    if (g !== L.grp) { g = L.grp; html += `<tr class="grp"><td colspan="5">${t("g_" + g)}</td></tr>`; }
+    const vals = DAYS.map((d) => L.info[d].has ? L.info[d].lastDep : null), best = Math.max(...vals.map((v) => v ?? -1));
+    html += `<tr><td><span class="lname">${badge(L, "sm")}${esc(lineName(L))}</span></td>${vals.map((v) => v == null ? `<td class="none">—</td>` : `<td class="${v === best ? "late" : ""}">${fmt(v)}</td>`).join("")}</tr>`;
+  }
+  $("#cmpBody").innerHTML = html + "</tbody></table>";
+}
+
+// ---------------------------------------------------------------- interactions
+listBody.addEventListener("click", (e) => {
+  const r = e.target.closest("[data-line],[data-station]"); if (!r) return;
+  r.dataset.line != null ? selectLine(+r.dataset.line) : selectStation(r.dataset.station);
+  if (innerWidth <= 900) $("#listPanel").classList.remove("open");
+});
+dBody.addEventListener("click", (e) => {
+  const s = e.target.closest("[data-station]"); if (s) return selectStation(s.dataset.station);
+  const l = e.target.closest("[data-line]"); if (l) selectLine(+l.dataset.line);
+});
+$("#q").addEventListener("input", renderList);
+$("#q").addEventListener("keydown", (e) => { if (e.key === "Enter") listBody.querySelector("[data-line],[data-station]")?.click(); });
+$("#qClear").addEventListener("click", () => { $("#q").value = ""; renderList(); $("#q").focus(); });
+const setPressed = (sel, key, v) => document.querySelectorAll(sel).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset[key] === v)));
+document.querySelectorAll("[data-day]").forEach((b) => b.addEventListener("click", () => {
+  state.day = b.dataset.day; store.set("day", state.day); setPressed("[data-day]", "day", state.day);
+  updatePositions(); updateColors(); drawTime(); refreshPanels();
+  if (!$("#planner").hidden) { renderFar(); if ($("#pResult").innerHTML) runPlanner(); }
+}));
+document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {
+  state.view = b.dataset.view; store.set("view", state.view);
+  WT = { time: 0, floor: 0, flat: 0 }; WT[state.view === "heat" ? "flat" : state.view] = 1;
+  setPressed("[data-view]", "view", state.view);
+  $("#legend").hidden = state.view !== "heat";
+  updateColors();
+}));
+document.querySelectorAll("[data-sort]").forEach((b) => b.addEventListener("click", () => { state.sort = b.dataset.sort; store.set("sort", state.sort); setPressed("[data-sort]", "sort", state.sort); renderList(); }));
+$("#themeBtn").addEventListener("click", () => { document.documentElement.setAttribute("data-theme", isDark() ? "light" : "dark"); });
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+$("#routeBtn").addEventListener("click", openPlanner);
+$("#cmpBtn").addEventListener("click", () => { if (!$("#compare").hidden) return openSide(null); openSide("compare"); renderCompare(); });
+$("#helpBtn").addEventListener("click", () => { openSide($("#help").hidden ? "help" : null); });
+$("#langBtn").addEventListener("click", () => { lang = { fr: "nl", nl: "en", en: "fr" }[lang]; store.set("lang", lang); applyLang(); });
+$("#listToggle").addEventListener("click", () => $("#listPanel").classList.toggle("open"));
+const hint = $("#hint");
+hint.addEventListener("click", (e) => { if (e.target.tagName !== "INPUT") hint.classList.add("hide"); });
+let hintTimer;
+function say(msg, keep) { hint.innerHTML = msg; hint.classList.remove("hide"); clearTimeout(hintTimer); if (!keep) hintTimer = setTimeout(() => hint.classList.add("hide"), 4500); }
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach((e) => { const v = t(e.dataset.i18n); if (typeof v === "string") e.textContent = v; });
+  document.querySelectorAll("[data-i18n-label]").forEach((e) => { e.setAttribute("aria-label", t(e.dataset.i18nLabel)); e.title = t(e.dataset.i18nLabel); });
+  $("#langBtn").textContent = lang.toUpperCase();
+  $("#q").placeholder = t("search"); $("#q").setAttribute("aria-label", t("search"));
+  $("#helpList").innerHTML = t("helpItems").map((x) => `<li>${x}</li>`).join("");
+  $("#credits").innerHTML = t("credits")(D.meta.feeds);
+  $("#timebar").setAttribute("aria-label", t("shown")); $("#track").setAttribute("aria-label", t("shown"));
+  if (!hint.classList.contains("hide")) hint.innerHTML = t("hint");
+  renderLabels(); fillStationList(); drawTime(); refreshPanels();
+  if (!$("#planner").hidden) { renderFar(); if ($("#pResult").innerHTML) runPlanner(); }
+}
+
+// clic sur la carte : ligne la plus proche ; survol en vue « Heures » : infobulle
+const pv = new THREE.Vector3(); let down = null;
+function nearestAt(cx, cy) {
+  const w = innerWidth, h = innerHeight; let best = null, bd = 14;
+  for (const L of lines) {
+    if (!has(L)) continue;
+    const y = lineY(L);
+    for (let i = 0; i < L.v.length; i += 2) {
+      pv.set(L.v[i].x, y, L.v[i].z).project(camera); if (pv.z > 1) continue;
+      const d = Math.hypot((pv.x + 1) / 2 * w - cx, (1 - pv.y) / 2 * h - cy);
+      if (d < bd) { bd = d; best = [L, i]; }
+    }
+  }
+  return best;
+}
+renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; hint.classList.add("hide"); });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  const hit = nearestAt(e.clientX, e.clientY);
+  if (hit) selectLine(hit[0].li);
+  else if (state.sel != null || state.station || state.route) { state.route = null; clearSel(); }
+});
+const tip = $("#tip"); let tipQueued = false, lastMove = null;
+renderer.domElement.addEventListener("pointermove", (e) => {
+  lastMove = e; if (state.view !== "heat" || e.buttons || tipQueued) { if (state.view !== "heat") tip.hidden = true; return; }
+  tipQueued = true;
+  requestAnimationFrame(() => {
+    tipQueued = false;
+    const hit = nearestAt(lastMove.clientX, lastMove.clientY);
+    if (!hit) { tip.hidden = true; return; }
+    const [L, i] = hit, [Tf, Tb] = L.T[state.day];
+    const x = Math.max(isNaN(Tf[i]) ? -1 : Tf[i], isNaN(Tb[i]) ? -1 : Tb[i]);
+    tip.innerHTML = `${esc(lineName(L))} · ${t("tipLast")} <b>${x >= 0 ? fmt(x) : "—"}</b>`;
+    tip.style.left = lastMove.clientX + "px"; tip.style.top = lastMove.clientY + "px"; tip.hidden = false;
+  });
+});
+renderer.domElement.addEventListener("pointerleave", () => { tip.hidden = true; });
+
+// ---------------------------------------------------------------- barre horaire
+const track = $("#track"), knob = $("#knob"), fill = $("#trackFill"), ticks = $("#ticks");
+const tickEls = [];
+for (let x = T_MIN; x <= T_MAX; x += 60) {
+  const labelledTick = (x / 60) % 2 === 0, pct = (x - T_MIN) / (T_MAX - T_MIN) * 100;
+  const s = document.createElement("span"); s.className = `tick${labelledTick ? "" : " minor"}${labelledTick && (x / 60) % 4 !== 0 ? " hide-sm" : ""}`;
+  s.style.left = pct + "%"; s.innerHTML = `<i></i>${labelledTick ? `<span>${fmt(x)}</span>` : ""}`; s.dataset.t = x;
+  ticks.appendChild(s); tickEls.push(s);
+}
+function drawTime() {
+  const k = (state.t - T_MIN) / (T_MAX - T_MIN);
+  knob.style.left = k * 100 + "%"; fill.style.width = `calc(12px + (100% - 24px) * ${k})`;
+  for (const s of tickEls) s.classList.toggle("after", +s.dataset.t > state.t);
+  track.setAttribute("aria-valuetext", fmt(state.t));
+  $("#clockTime").textContent = fmt(state.t);
+  const day = state.day, now = state.t; let wait = 0, on = 0, off = 0, nextStart = null, nextEnd = null;
+  for (const L of lines) {
+    const I = L.info[day]; if (!I.has) continue;
+    if (now < I.firstDep) { wait++; if (!nextStart || I.firstDep < nextStart.info[day].firstDep) nextStart = L; }
+    else if (now < I.lastDep) { on++; if (!nextEnd || I.lastDep < nextEnd.info[day].lastDep) nextEnd = L; }
+    else off++;
+  }
+  let msg = t("stNow")(on, off);
+  if (wait) msg += t("stWait")(wait) + `　${t("nextFirst")} : <b>${esc(lineName(nextStart))}</b> (${fmt(nextStart.info[day].firstDep)})`;
+  else if (nextEnd) msg += `　${t("nextEnd")} : <b>${esc(lineName(nextEnd))}</b> (${fmt(nextEnd.info[day].lastDep)})`;
+  else msg += "　" + t("allStopped");
+  $("#status").innerHTML = msg;
+}
+let lastMin = -1;
+function setTime(x, user) {
+  state.t = Math.max(T_MIN, Math.min(T_MAX, x));
+  drawTime(); updateColors();
+  if (Math.floor(state.t) !== lastMin) { lastMin = Math.floor(state.t); renderList(); if (!$("#detail").hidden) renderDetail(); }
+  if (user && state.playing) stopPlay();
+}
+let drag = false;
+const tAt = (x) => { const r = track.getBoundingClientRect(); return T_MIN + (x - r.left) / r.width * (T_MAX - T_MIN); };
+track.addEventListener("pointerdown", (e) => { drag = true; track.setPointerCapture(e.pointerId); setTime(tAt(e.clientX), true); hint.classList.add("hide"); });
+track.addEventListener("pointermove", (e) => { if (drag) setTime(tAt(e.clientX), true); });
+track.addEventListener("pointerup", () => { drag = false; if (!$("#planner").hidden) { renderFar(); if ($("#pResult").innerHTML) runPlanner(); } });
+track.addEventListener("keydown", (e) => {
+  const d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 10, PageDown: -10 }[e.key];
+  if (d) { e.preventDefault(); setTime(Math.round(state.t) + d * (e.shiftKey ? 10 : 1), true); }
+  if (e.key === "Home") setTime(T_MIN, true); if (e.key === "End") setTime(T_MAX, true);
+});
+const PLAY = '<svg viewBox="0 0 16 16"><path d="M4 2v12l10-6z" fill="currentColor"/></svg>', PAUSE = '<svg viewBox="0 0 16 16"><path d="M3.5 2h3.2v12H3.5zM9.3 2h3.2v12H9.3z" fill="currentColor"/></svg>';
+const playBtn = $("#play"); playBtn.innerHTML = PLAY;
+let lastFrame = 0;
+function stopPlay() { state.playing = false; playBtn.innerHTML = PLAY; }
+playBtn.addEventListener("click", () => {
+  if (state.playing) return stopPlay();
+  if (state.t >= T_MAX - 0.5) state.t = T_MIN;
+  state.playing = true; lastFrame = performance.now(); playBtn.innerHTML = PAUSE;
+});
+function brussels() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Brussels", hour: "2-digit", minute: "2-digit", weekday: "short", hourCycle: "h23" }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+  let x = +p.hour * 60 + +p.minute, wd = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday);
+  if (x < 240) { x += 1440; wd = (wd + 6) % 7; }
+  return { t: x, day: wd === 0 ? "dimanche" : wd === 6 ? "samedi" : wd === 5 ? "vendredi" : "semaine" };
+}
+$("#nowBtn").addEventListener("click", () => {
+  const n = brussels(); state.day = n.day; store.set("day", n.day); setPressed("[data-day]", "day", n.day);
+  updatePositions(); lastMin = -1; setTime(n.t, true); refreshPanels();
+});
+
+// ---------------------------------------------------------------- boucle
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h); composer.setSize(w, h); labelRenderer.setSize(w, h);
+  camera.aspect = w / h; camera.fov = w < 700 ? 50 : 36; camera.updateProjectionMatrix();
+  for (const m of lineMats) m.resolution.set(w, h);
+  const cb = $("#controls").getBoundingClientRect();
+  document.documentElement.style.setProperty("--panelTop", Math.round(cb.bottom + 12) + "px");
+}
+addEventListener("resize", resize);
+let frameNo = 0;
+function declutter() {
+  const kept = [];
+  for (const el of [...labelled.map((S) => S.lblEl), ...COMMUNES.map((c) => c.e)]) {
+    const r = el.getBoundingClientRect();
+    const hit = r.width === 0 || kept.some((k) => r.left < k.right + 4 && r.right > k.left - 4 && r.top < k.bottom + 2 && r.bottom > k.top - 2);
+    el.style.visibility = hit ? "hidden" : "";
+    if (!hit) kept.push(r);
+  }
+}
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!innerWidth || !innerHeight) return;
+  if (laneMat.resolution.x !== innerWidth || laneMat.resolution.y !== innerHeight) resize();
+  if (camAnim) camAnim(now);
+  controls.update();
+  let moved = false;
+  for (const k in W) { const d = WT[k] - W[k]; if (d !== 0) { W[k] = Math.abs(d) < 1e-3 || REDUCED ? WT[k] : W[k] + d * 0.12; moved = true; } }
+  const dist = camera.position.distanceTo(controls.target);
+  pxPerKm = innerHeight / (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+  const lanePx = Math.max(2.3, Math.min(10, 0.085 * pxPerKm));
+  laneMat.linewidth = lanePx;
+  const newOff = lanePx / 2 / pxPerKm;
+  if (Math.abs(newOff - offKm) / offKm > 0.04) { offKm = newOff; moved = true; }
+  stopMat.size = Math.max(3.5, Math.min(17, 0.19 * pxPerKm));
+  trains.m.size = Math.max(14, Math.min(34, 0.5 * pxPerKm));
+  trails.m.size = trains.m.size * 0.55;
+  if (moved) { updatePositions(); updateColors(); }
+  if (state.playing) {
+    const dt = Math.min(100, now - lastFrame); lastFrame = now;
+    const slow = (state.t >= 21 * 60 && state.t < 26 * 60) || (state.t >= 4.5 * 60 && state.t < 6.5 * 60);
+    const nt = state.t + dt / (slow ? 75 : 12);
+    if (nt >= T_MAX) { setTime(T_MAX); stopPlay(); } else setTime(nt);
+  }
+  if (bloom.enabled) composer.render(); else renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  if (++frameNo % 6 === 0) declutter();
+}
+
+// ---------------------------------------------------------------- démarrage
+setPressed("[data-day]", "day", state.day); setPressed("[data-view]", "view", state.view); setPressed("[data-sort]", "sort", state.sort);
+$("#legend").hidden = state.view !== "heat";
+resize(); applyLang(); applyTheme(); drawTime();
+if (store.get("hint", false)) hint.classList.add("hide"); else { store.set("hint", true); hint.innerHTML = t("hint"); setTimeout(() => hint.classList.add("hide"), 10000); }
+// lien direct : #M1, #T7, #N06, #S1 ou #nom-d-arret
+function openFromHash() {
+  const h = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+  if (!h) return;
+  const li = lines.findIndex((L) => L.id.toLowerCase() === h);
+  if (li >= 0) { if (state.sel !== li) selectLine(li); }
+  else if (bySlug.has(h) && state.station !== bySlug.get(h).fr) selectStation(bySlug.get(h).fr);
+}
+openFromHash();
+addEventListener("hashchange", openFromHash);
+$("#loading").remove();
+requestAnimationFrame(frame);
+</script>
+
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "16aa2fa543004064a3889b014c46b89f"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
