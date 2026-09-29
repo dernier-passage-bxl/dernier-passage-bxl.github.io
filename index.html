@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dernier Passage Bruxelles</title>
-<meta name="description" content="Atlas 3D des métros, trams, Noctis et trains à Bruxelles : premiers et derniers passages, itinéraire du dernier retour.">
+<meta name="description" content="Atlas 3D des derniers métros, trams, Noctis et trains à Bruxelles, et calcul du dernier retour possible.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800;900&family=Noto+Sans:wght@400;500;700;900&display=swap">
@@ -441,7 +441,8 @@ const I18N = {
     stopsHead: "Arrêts", linesHead: "Lignes", noMatch: (q) => `Aucun arrêt ni ligne pour « ${q} ».`, andMore: (n) => `et ${n} autres`,
     stNow: (on, off) => `En service <b>${on}</b> lignes · dernier départ passé <b>${off}</b>`, stWait: (n) => ` · pas encore commencé <b>${n}</b>`,
     nextFirst: "Prochain premier départ", nextEnd: "Prochaine à finir", allStopped: "Tout le réseau est à l'arrêt.",
-    hint: "Faites glisser la barre horaire : chaque voie s'allume au premier passage et s'éteint au dernier.<br>Faites glisser la carte pour la faire tourner.",
+    hint: "Faites glisser la barre horaire : chaque voie s'éteint au passage du dernier véhicule.<br>Faites glisser la carte pour la faire tourner.",
+    nowEarly: (n, s) => `Il est ${n} : tout roule encore. La carte commence à ${s}.`, nowLate: (n) => `Il est ${n} : plus aucun métro, tram, Noctis ni train ne circule.`,
     plannerTitle: "Puis-je encore rentrer ?", from: "Départ", to: "Arrivée", pGo: "Trouver le dernier départ",
     pLast: "Dernier départ possible", pFromStop: (s) => `de ${s}`, pLeft: (x) => `Il vous reste ${x} à l'heure affichée.`, pLate: (t) => `Trop tard à ${t} : ce dernier départ est déjà passé.`,
     pNone: "Aucun trajet possible ce soir entre ces deux arrêts.", pUnknown: (s) => `Arrêt inconnu : « ${s} ». Choisissez-le dans la liste.`, pSame: "Choisissez deux arrêts différents.",
@@ -451,8 +452,8 @@ const I18N = {
     cmpTitle: "Comparer les jours", cmpNote: "Dernier départ de chaque ligne selon le jour. Le plus tardif est en vert.", line: "Ligne",
     helpTitle: "Mode d'emploi",
     helpItems: [
-      "<b>Chaque ligne est une bande à deux voies</b>, une par sens. Les trains SNCB roulent à gauche, métro et tram à droite. Une voie s'allume au premier passage du matin et devient grise après le dernier.",
-      "<b>Les points lumineux</b> sont les premiers et derniers véhicules en route, avec leur traînée.",
+      "<b>Chaque ligne est une bande à deux voies</b>, une par sens. Les trains SNCB roulent à gauche, métro et tram à droite. Une voie devient grise quand le dernier véhicule y est passé. Les Noctis s'allument à leur premier départ, vers minuit.",
+      "<b>Les points lumineux</b> sont les derniers véhicules encore en route, avec leur traînée.",
       "<b>Hauteur</b> : plus une ligne finit tard, plus elle flotte haut ; le plan rouge est l'heure affichée. <b>Étages</b> : le métro passe sous le sol, le tram et les Noctis en surface, les trains au-dessus. <b>Heures</b> : chaque tronçon est coloré selon l'heure de son dernier passage.",
       "<b>Puis-je encore rentrer ?</b> calcule le dernier départ possible entre deux arrêts, correspondances comprises, et les derniers trains vers les grandes villes.",
       "Glisser pour tourner, clic droit ou deux doigts pour déplacer, molette ou pincement pour zoomer. Cliquez une ligne ou cherchez un arrêt pour ses derniers départs. Chaque fiche a un lien à partager.",
@@ -476,7 +477,8 @@ const I18N = {
     stopsHead: "Haltes", linesHead: "Lijnen", noMatch: (q) => `Geen halte of lijn voor "${q}".`, andMore: (n) => `en ${n} andere`,
     stNow: (on, off) => `In dienst <b>${on}</b> lijnen · laatste vertrek voorbij <b>${off}</b>`, stWait: (n) => ` · nog niet begonnen <b>${n}</b>`,
     nextFirst: "Volgend eerste vertrek", nextEnd: "Volgende die stopt", allStopped: "Het hele net ligt stil.",
-    hint: "Versleep de tijdbalk: elk spoor licht op bij de eerste doortocht en dooft na de laatste.<br>Sleep de kaart om ze te draaien.",
+    hint: "Versleep de tijdbalk: elk spoor dooft wanneer het laatste voertuig voorbij is.<br>Sleep de kaart om ze te draaien.",
+    nowEarly: (n, s) => `Het is ${n}: alles rijdt nog. De kaart begint om ${s}.`, nowLate: (n) => `Het is ${n}: er rijdt geen metro, tram, Noctis of trein meer.`,
     plannerTitle: "Geraak ik nog thuis?", from: "Vertrek", to: "Aankomst", pGo: "Zoek het laatste vertrek",
     pLast: "Laatst mogelijke vertrek", pFromStop: (s) => `vanaf ${s}`, pLeft: (x) => `U hebt nog ${x} op het getoonde uur.`, pLate: (t) => `Te laat om ${t}: dit laatste vertrek is al voorbij.`,
     pNone: "Vanavond geen verbinding tussen deze haltes.", pUnknown: (s) => `Onbekende halte: "${s}". Kies ze uit de lijst.`, pSame: "Kies twee verschillende haltes.",
@@ -486,8 +488,8 @@ const I18N = {
     cmpTitle: "Dagen vergelijken", cmpNote: "Laatste vertrek van elke lijn per dag. Het laatste staat in het groen.", line: "Lijn",
     helpTitle: "Handleiding",
     helpItems: [
-      "<b>Elke lijn is een band met twee sporen</b>, één per richting. NMBS-treinen rijden links, metro en tram rechts. Een spoor licht op bij de eerste doortocht en wordt grijs na de laatste.",
-      "<b>De lichtende punten</b> zijn de eerste en laatste voertuigen onderweg, met hun spoor.",
+      "<b>Elke lijn is een band met twee sporen</b>, één per richting. NMBS-treinen rijden links, metro en tram rechts. Een spoor wordt grijs zodra het laatste voertuig voorbij is. De Noctis lichten op bij hun eerste vertrek, rond middernacht.",
+      "<b>De lichtende punten</b> zijn de laatste voertuigen die nog onderweg zijn, met hun spoor.",
       "<b>Hoogte</b>: hoe later een lijn stopt, hoe hoger ze zweeft; het rode vlak is het getoonde uur. <b>Verdiepingen</b>: de metro onder de grond, tram en Noctis aan de oppervlakte, treinen erboven. <b>Uren</b>: elk traject gekleurd volgens het uur van de laatste doortocht.",
       "<b>Geraak ik nog thuis?</b> berekent het laatste mogelijke vertrek tussen twee haltes, met overstappen, en de laatste treinen naar de grote steden.",
       "Slepen om te draaien, rechtsklik of twee vingers om te verschuiven, scrollen of knijpen om te zoomen. Klik op een lijn of zoek een halte. Elke fiche heeft een deelbare link.",
@@ -511,7 +513,8 @@ const I18N = {
     stopsHead: "Stops", linesHead: "Lines", noMatch: (q) => `No stop or line matches "${q}".`, andMore: (n) => `and ${n} more`,
     stNow: (on, off) => `Running <b>${on}</b> lines · last departure gone <b>${off}</b>`, stWait: (n) => ` · not started yet <b>${n}</b>`,
     nextFirst: "Next first departure", nextEnd: "Next to finish", allStopped: "The whole network has stopped.",
-    hint: "Drag the time bar: each track lights up with the first run and goes dark after the last.<br>Drag the map to rotate it.",
+    hint: "Drag the time bar: each track goes dark once the last vehicle has passed.<br>Drag the map to rotate it.",
+    nowEarly: (n, s) => `It's ${n}: everything is still running. The map starts at ${s}.`, nowLate: (n) => `It's ${n}: no metro, tram, Noctis or train is running any more.`,
     plannerTitle: "Can I still get home?", from: "From", to: "To", pGo: "Find the last departure",
     pLast: "Latest possible departure", pFromStop: (s) => `from ${s}`, pLeft: (x) => `You have ${x} left at the time shown.`, pLate: (t) => `Too late at ${t}: this last departure has gone.`,
     pNone: "No connection between these stops tonight.", pUnknown: (s) => `Unknown stop: "${s}". Pick it from the list.`, pSame: "Pick two different stops.",
@@ -521,8 +524,8 @@ const I18N = {
     cmpTitle: "Compare days", cmpNote: "Last departure of every line by day. The latest is in green.", line: "Line",
     helpTitle: "How it works",
     helpItems: [
-      "<b>Each line is a two-track band</b>, one per direction. SNCB trains run on the left, metro and tram on the right. A track lights up with the first run of the morning and turns grey after the last.",
-      "<b>Glowing dots</b> are the first and last vehicles on their way, with a trail.",
+      "<b>Each line is a two-track band</b>, one per direction. SNCB trains run on the left, metro and tram on the right. A track turns grey once the last vehicle has passed. Noctis lines light up with their first run, around midnight.",
+      "<b>Glowing dots</b> are the last vehicles still on their way, with a trail.",
       "<b>Height</b>: the later a line ends, the higher it floats; the red plane is the time shown. <b>Floors</b>: metro underground, tram and Noctis at street level, trains above. <b>Hours</b>: every section coloured by the time of its last run.",
       "<b>Can I still get home?</b> finds the latest possible departure between two stops, with transfers, plus the last trains to major cities.",
       "Drag to rotate, right-click or two fingers to pan, wheel or pinch to zoom. Click a line or search a stop for its last departures. Every card has a shareable link.",
@@ -539,7 +542,7 @@ const stName = (fr, nl) => (lang === "nl" && nl ? nl : fr);
 const stOther = (fr, nl) => (lang === "nl" ? (nl && nl !== fr ? fr : "") : (nl && nl !== fr ? nl : ""));
 
 // ---------------------------------------------------------------- temps
-const T_MIN = 4 * 60, T_MAX = 28 * 60;
+const T_MIN = 21 * 60, T_MAX = 27 * 60 + 30;       // soirée : 21:00 → 3:30 (fin des Noctis)
 const H_MIN = 21 * 60 + 30, H_MAX = 25 * 60 + 45;
 const fmt = (x) => { x = Math.floor(x + 1e-6); return `${Math.floor(x / 60) % 24}:${String(x % 60).padStart(2, "0")}`; };
 const dur = (m) => { m = Math.max(0, Math.ceil(m)); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}` : `${m} min`; };
@@ -1340,9 +1343,9 @@ renderer.domElement.addEventListener("pointerleave", () => { tip.hidden = true; 
 // ---------------------------------------------------------------- barre horaire
 const track = $("#track"), knob = $("#knob"), fill = $("#trackFill"), ticks = $("#ticks");
 const tickEls = [];
-for (let x = T_MIN; x <= T_MAX; x += 60) {
-  const labelledTick = (x / 60) % 2 === 0, pct = (x - T_MIN) / (T_MAX - T_MIN) * 100;
-  const s = document.createElement("span"); s.className = `tick${labelledTick ? "" : " minor"}${labelledTick && (x / 60) % 4 !== 0 ? " hide-sm" : ""}`;
+for (let x = T_MIN; x <= T_MAX; x += 10) {
+  const labelledTick = x % 30 === 0, pct = (x - T_MIN) / (T_MAX - T_MIN) * 100;
+  const s = document.createElement("span"); s.className = `tick${labelledTick ? "" : " minor"}${labelledTick && x % 60 !== 0 ? " hide-sm" : ""}`;
   s.style.left = pct + "%"; s.innerHTML = `<i></i>${labelledTick ? `<span>${fmt(x)}</span>` : ""}`; s.dataset.t = x;
   ticks.appendChild(s); tickEls.push(s);
 }
@@ -1400,6 +1403,8 @@ function brussels() {
 $("#nowBtn").addEventListener("click", () => {
   const n = brussels(); state.day = n.day; store.set("day", n.day); setPressed("[data-day]", "day", n.day);
   updatePositions(); lastMin = -1; setTime(n.t, true); refreshPanels();
+  if (n.t < T_MIN) say(t("nowEarly")(fmt(n.t), fmt(T_MIN)));
+  else if (n.t > T_MAX) say(t("nowLate")(fmt(n.t)));
 });
 
 // ---------------------------------------------------------------- boucle
@@ -1442,8 +1447,7 @@ function frame(now) {
   if (moved) { updatePositions(); updateColors(); }
   if (state.playing) {
     const dt = Math.min(100, now - lastFrame); lastFrame = now;
-    const slow = (state.t >= 21 * 60 && state.t < 26 * 60) || (state.t >= 4.5 * 60 && state.t < 6.5 * 60);
-    const nt = state.t + dt / (slow ? 75 : 12);
+    const nt = state.t + dt / 75;   // 1 minute toutes les 75 ms : la soirée défile en ~30 s
     if (nt >= T_MAX) { setTime(T_MAX); stopPlay(); } else setTime(nt);
   }
   if (bloom.enabled) composer.render(); else renderer.render(scene, camera);
